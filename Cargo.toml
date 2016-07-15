@@ -1,0 +1,6 @@
+[package]
+name = "rot"
+version = "0.1.0"
+authors = ["Choongwoo Han <cwhan.tunz@gmail.com>"]
+
+[dependencies]
