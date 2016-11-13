@@ -1,6 +1,6 @@
 [package]
-name = "rot"
-version = "0.1.0"
+name = "buster"
+version = "0.0.1"
 authors = ["Choongwoo Han <cwhan.tunz@gmail.com>"]
 
 [dependencies]
