@@ -1,7 +1,9 @@
 [package]
-name = "buster"
+name = "baeum"
 version = "0.0.1"
 authors = ["Choongwoo Han <cwhan.tunz@gmail.com>"]
 
 [dependencies]
-clap = "2"
+clap = "2.19"
+log = "0.3.6"
+env_logger = "0.3.5"
