@@ -15,9 +15,9 @@ fn arg_parse<'a> () -> ArgMatches<'a> {
     .version("0.0.1")
     .author("Choongwoo Han <cwhan.tunz@gmail.com>")
     .about("A Reinforcement-Learning-Based Fuzzing")
-    .arg(Arg::with_name("seeds")
-       .short("s")
-       .help("Directory of seed files")
+    .arg(Arg::with_name("input")
+       .short("i")
+       .help("Directory of input seed files")
        .required(true)
        .takes_value(true))
     .arg(Arg::with_name("output")
@@ -33,7 +33,7 @@ fn main() {
   env_logger::init().unwrap();
 
   let matches = arg_parse();
-  let seeds_dir = matches.value_of("seeds").unwrap();
+  let seeds_dir = matches.value_of("input").unwrap();
   let output_dir = matches.value_of("output").unwrap();
   let args: Vec<&str> = matches.values_of("args").unwrap().collect();
 
