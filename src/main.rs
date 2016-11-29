@@ -5,6 +5,8 @@ use clap::{Arg, App, ArgMatches, AppSettings};
 mod seed;
 mod mutate;
 mod fuzz;
+mod conf;
+mod exec;
 
 fn arg_parse<'a> () -> ArgMatches<'a> {
   App::new("baeum")
@@ -39,10 +41,13 @@ fn main() {
   debug!("Output Dir: {}", output_dir);
   debug!("Command Line: {:?}", args);
 
-  let seeds = match seed::load_seed_files(seeds_dir) {
+  let conf = conf::Conf::new_without_filename(args, output_dir);
+  let seeds = match seed::load_seed_files(&conf, seeds_dir) {
                 Ok(v) => v,
                 Err(e) => { println!("Error: {}", e); return}
               };
 
-  fuzz::fuzz(seeds, args, output_dir);
+  fuzz::fuzz(conf, seeds);
+
+  println!("Fuzzing is finished!");
 }
