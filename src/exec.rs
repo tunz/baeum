@@ -2,7 +2,8 @@ use std::fs;
 use std::io;
 use std::io::prelude::*;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::os::unix::io::{FromRawFd};
 
 use conf::Conf;
 use seed::Seed;
@@ -28,10 +29,17 @@ pub fn exec(conf:&Conf, buf:&Vec<u8>) {
     None => panic!("Too few command line arguments")
   };
 
-  let mut child = Command::new(prog)
-                    .args(args)
-                    .spawn()
-                    .expect("failed to execute child");
+  let mut child = unsafe {
+    Command::new(prog)
+      .args(args)
+      .stdin(Stdio::from_raw_fd(conf.stdin_fd))
+      .stdout(Stdio::null())
+      .stderr(Stdio::null())
+      .spawn()
+      .expect("failed to execute child")
+  };
+
+  let status = child.wait().expect("Child Wait");
 
   clear_env(&conf);
 }

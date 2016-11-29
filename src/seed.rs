@@ -24,7 +24,7 @@ impl Seed {
 
   pub fn load_buf(&self) -> Vec<u8> {
     let mut buf = vec![];
-    fs::File::open(&self.filepath).unwrap().read(&mut buf).unwrap();
+    fs::File::open(&self.filepath).unwrap().read_to_end(&mut buf).unwrap();
     buf
   }
 
@@ -35,7 +35,7 @@ impl Seed {
 
   fn copy_from_file(&self, path:&str) {
     let mut buf:Vec<u8> = vec![];
-    fs::File::open(&path).unwrap().read(&mut buf).unwrap();
+    fs::File::open(&path).unwrap().read_to_end(&mut buf).unwrap();
     self.save_buf(&buf)
   }
 }

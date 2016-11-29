@@ -3,11 +3,13 @@ use std::io;
 use std::io::prelude::*;
 use std::path::Path;
 use std::process;
+use std::os::unix::io::{RawFd, IntoRawFd};
 
 pub struct Conf {
   pub args: Vec<String>,
   pub input_path: String,
   pub output_dir: String,
+  pub stdin_fd: RawFd,
 }
 
 impl Conf {
@@ -20,14 +22,16 @@ impl Conf {
     fs::create_dir(&output_dir).unwrap();
     fs::create_dir(format!("{}/queue", output_dir)).unwrap();
     fs::create_dir(format!("{}/crash", output_dir)).unwrap();
+    let stdin_fd = fs::File::create(format!("{}/.stdin", output_dir)).unwrap().into_raw_fd();
 
     Conf {
       args: args.iter().map(|&s|
-                              if s == "@@" { String::from(input_path) }
+                              if s == "@@" { String::from(input_path) } // XXX: If target is STDIN?
                               else { String::from(s) }
                             ).collect(),
       output_dir: String::from(output_dir),
-      input_path: String::from(input_path)
+      input_path: String::from(input_path),
+      stdin_fd: stdin_fd
     }
   }
 
