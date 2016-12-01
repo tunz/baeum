@@ -1,5 +1,4 @@
 use std::fs;
-use std::io;
 use std::io::prelude::*;
 use std::path::Path;
 use std::process;
@@ -11,6 +10,8 @@ pub struct Conf {
   pub output_dir: String,
   pub stdin_fd: RawFd,
 }
+
+static mut crash_count: u32 = 0;
 
 impl Conf {
   pub fn new(args:Vec<&str>, output_dir:&str, input_path: &str) -> Conf {
@@ -38,6 +39,15 @@ impl Conf {
   pub fn new_without_filename(args:Vec<&str>, output_dir:&str) -> Conf {
     let filepath = format!("{}/.input", output_dir);
     Conf::new(args, output_dir, &filepath)
+  }
+
+  pub fn save_crash(&self, buf:&Vec<u8>) {
+    let path = unsafe {
+      crash_count = crash_count + 1;
+      format!("{}/crash/tc-{}", self.output_dir, crash_count)
+    };
+    let mut f = fs::File::create(&path).unwrap();
+    f.write_all(buf).unwrap();
   }
 }
 

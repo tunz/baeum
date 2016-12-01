@@ -9,7 +9,7 @@ pub struct Seed {
   filepath: String
 }
 
-static mut seed_count: i32 = 0;
+static mut seed_count: u32 = 0;
 
 impl Seed {
   pub fn new(conf:&Conf, filepath:&str) -> Seed {

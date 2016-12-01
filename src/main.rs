@@ -1,6 +1,8 @@
 extern crate clap;
 #[macro_use] extern crate log;
 extern crate env_logger;
+extern crate wait_timeout;
+
 use clap::{Arg, App, ArgMatches, AppSettings};
 mod seed;
 mod mutate;

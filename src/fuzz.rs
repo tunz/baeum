@@ -8,7 +8,7 @@ fn fuzz_one(conf:&Conf, seed:&Seed) -> Vec<Seed> {
   let content = seed.load_buf();
 
   let mutated_content = mutate::mutate(&content);
-  let result = exec::exec(&conf, &mutated_content);
+  let interesting = exec::run_target(&conf, &mutated_content);
 
   // XXX
 
