@@ -9,8 +9,10 @@ fn fuzz_one(conf:&Conf, seed:&Seed) -> Vec<Seed> {
 
   let mutated_content = mutate::mutate(&content);
   let interesting = exec::run_target(&conf, &mutated_content);
-
-  // XXX
+  if interesting {
+    let new_seed = Seed::new(conf, &mutated_content);
+    new_seeds.push(new_seed);
+  }
 
   new_seeds
 }
@@ -19,7 +21,7 @@ pub fn fuzz(conf:Conf, seeds:Vec<Seed>) {
   let mut q = seeds;
 
   loop {
-    let mut cur = 0;
+    let mut cur = 0; // TODO: scheduling?
 
     while cur < q.len() {
       let new_seeds = fuzz_one(&conf, &q[cur]);

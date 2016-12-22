@@ -12,14 +12,24 @@ pub struct Seed {
 static mut seed_count: u32 = 0;
 
 impl Seed {
-  pub fn new(conf:&Conf, filepath:&str) -> Seed {
+  pub fn new(conf:&Conf, buf:&Vec<u8>) -> Seed {
+    let new_seed = Seed::create_seed(conf);
+    new_seed.save_buf(&buf);
+    new_seed
+  }
+
+  pub fn new_from_file(conf:&Conf, filepath:&str) -> Seed {
+    let new_seed = Seed::create_seed(conf);
+    new_seed.copy_from_file(filepath);
+    new_seed
+  }
+
+  fn create_seed(conf:&Conf) -> Seed {
     let path = unsafe {
       seed_count = seed_count + 1;
       format!("{}/queue/tc-{}", conf.output_dir, seed_count)
     };
-    let new_seed = Seed { filepath: path };
-    new_seed.copy_from_file(filepath);
-    new_seed
+    Seed { filepath: path }
   }
 
   pub fn load_buf(&self) -> Vec<u8> {
@@ -45,7 +55,7 @@ pub fn load_seed_files(conf:&Conf, seed_dir:&str) -> io::Result<Vec<Seed>> {
   let seeds = try!(fs::read_dir(seed_dir))
                 .filter_map(|entry| entry.ok())
                 .filter_map(|e| e.path().to_str().and_then(|s| Some(String::from(s))))
-                .map(|s| Seed::new(&conf, &s))
+                .map(|s| Seed::new_from_file(&conf, &s))
                 .collect::<Vec<Seed>>();
   debug!("{:?}", seeds);
   Ok(seeds)
