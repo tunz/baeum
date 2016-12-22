@@ -27,6 +27,10 @@ fn arg_parse<'a> () -> ArgMatches<'a> {
        .help("Directory of output files")
        .required(true)
        .takes_value(true))
+    .arg(Arg::with_name("timeout")
+       .short("t")
+       .help("Timeout for each execution in milliseconds (default: 1000)")
+       .takes_value(true))
     .arg(Arg::from_usage("<args>... 'commands to run'"))
     .get_matches()
 }
@@ -38,12 +42,14 @@ fn main() {
   let seeds_dir = matches.value_of("input").unwrap();
   let output_dir = matches.value_of("output").unwrap();
   let args: Vec<&str> = matches.values_of("args").unwrap().collect();
+  let t = matches.value_of("timeout").unwrap_or("1000").parse::<u64>()
+            .expect("Fail to parse timeout option");
 
   debug!("Seed Dir: {}", seeds_dir);
   debug!("Output Dir: {}", output_dir);
   debug!("Command Line: {:?}", args);
 
-  let conf = conf::Conf::new_without_filename(args, output_dir);
+  let conf = conf::Conf::new_without_filename(args, output_dir, t);
   let seeds = match seed::load_seed_files(&conf, seeds_dir) {
                 Ok(v) => v,
                 Err(e) => { println!("Error: {}", e); return}

@@ -9,12 +9,13 @@ pub struct Conf {
   pub input_path: String,
   pub output_dir: String,
   pub stdin_fd: RawFd,
+  pub timeout: u64,
 }
 
 static mut crash_count: u32 = 0;
 
 impl Conf {
-  pub fn new(args:Vec<&str>, output_dir:&str, input_path: &str) -> Conf {
+  pub fn new(args:Vec<&str>, output_dir:&str, t:u64, input_path: &str) -> Conf {
     if Path::new(&output_dir).exists() {
       println!("Error: {} already exists", output_dir);
       process::exit(1)
@@ -32,13 +33,14 @@ impl Conf {
                             ).collect(),
       output_dir: String::from(output_dir),
       input_path: String::from(input_path),
-      stdin_fd: stdin_fd
+      stdin_fd: stdin_fd,
+      timeout: t,
     }
   }
 
-  pub fn new_without_filename(args:Vec<&str>, output_dir:&str) -> Conf {
+  pub fn new_without_filename(args:Vec<&str>, output_dir:&str, t:u64) -> Conf {
     let filepath = format!("{}/.input", output_dir);
-    Conf::new(args, output_dir, &filepath)
+    Conf::new(args, output_dir, t, &filepath)
   }
 
   pub fn save_crash(&self, buf:&Vec<u8>) {

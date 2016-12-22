@@ -43,7 +43,7 @@ fn exec(conf:&Conf) -> ExecResult {
       .expect("failed to execute child")
   };
 
-  let one_sec = Duration::from_secs(1); // XXX: timeout
+  let one_sec = Duration::from_millis(conf.timeout); // TODO: Use Average timeout
   match child.wait_timeout(one_sec).expect("Wait Child") {
     Some(status) =>
       match status.unix_signal() {
