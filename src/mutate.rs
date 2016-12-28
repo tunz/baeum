@@ -48,23 +48,13 @@ fn find_close_number(buf:&Vec<u8>, offset:usize) -> Option<usize> {
 }
 
 fn find_number_range(buf:&Vec<u8>, offset:usize) -> (usize, usize) {
-  let mut beg = offset;
-  let mut end = offset;
+  let mut beg = (1..offset+1).rev().find(|&x| !is_digit(buf[x - 1]))
+                  .unwrap_or(offset);
+  beg = if beg > 0 && buf[beg - 1] == '-' as u8 { beg - 1 } else { beg };
 
-  for i in (0..offset).rev() {
-    if !is_digit(buf[i]) {
-      break;
-    }
-    beg = i;
-  }
-  beg = if beg > 0 && buf[beg - 1] == '-' as u8 { beg - 1} else { beg };
+  let end = (offset..buf.len()-1).find(|&x| !is_digit(buf[x + 1]))
+              .unwrap_or(offset);
 
-  for i in offset..buf.len() {
-    if !is_digit(buf[i]) {
-      break;
-    }
-    end = i;
-  }
   (beg, end)
 }
 
@@ -94,16 +84,8 @@ fn change_ascii_integer(mut buf:Vec<u8>) -> Vec<u8> {
 }
 
 fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
-  let (size, endian) = match get_random(8) {
-                         0 | 1 => (1, Endian::Little),
-                         2 => (2, Endian::Little),
-                         3 => (2, Endian::Big),
-                         4 => (4, Endian::Little),
-                         5 => (4, Endian::Big),
-                         6 => (8, Endian::Little),
-                         7 => (8, Endian::Big),
-                         _ => panic!("unreachable code")
-                       };
+  let size = [1, 2, 4, 8][get_random(4)];
+  let endian = if get_random(2) == 0 { Endian::Little } else { Endian::Big };
   let offset = get_random(buf.len() - size + 1);
 
   let num: i64 = match endian {
