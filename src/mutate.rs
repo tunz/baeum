@@ -1,6 +1,11 @@
 use rand;
 use rand::distributions::{IndependentSample, Range};
 
+enum Endian {
+  Big,
+  Little
+}
+
 fn get_random(sz:usize) -> usize {
   let rnd = Range::new(0, sz);
   let mut rng = rand::thread_rng();
@@ -63,20 +68,24 @@ fn find_number_range(buf:&Vec<u8>, offset:usize) -> (usize, usize) {
   (beg, end)
 }
 
-fn change_ascii_integer(mut buf:Vec<u8>) -> Vec<u8> {
-  let offset = match find_close_number(&buf, get_random(buf.len())) {
-                 Some(x) => x,
-                 None => return buf
-  };
-  let (beg, end) = find_number_range(&buf, offset);
-  let num = String::from_utf8(buf[beg .. end+1].to_vec()).unwrap().parse::<i64>().unwrap();
-
-  let new_num = match get_random(3) {
+fn change_integer(num:i64) -> i64 {
+  match get_random(3) {
     0 => num + get_random(30) as i64 + 1,
     1 => num - get_random(30) as i64 - 1,
     2 => 0xffffffff, // XXX: dictionary?
     _ => panic!("unreachable code")
-  };
+  }
+}
+
+fn change_ascii_integer(mut buf:Vec<u8>) -> Vec<u8> {
+  let offset = match find_close_number(&buf, get_random(buf.len())) {
+                 Some(x) => x,
+                 None => return buf
+               };
+  let (beg, end) = find_number_range(&buf, offset);
+  let num = String::from_utf8(buf[beg .. end+1].to_vec()).unwrap().parse::<i64>().unwrap();
+
+  let new_num = change_integer(num);
 
   let mut ret = buf[0..beg].to_vec(); // Better idea to write this code??
   ret.extend(new_num.to_string().into_bytes());
@@ -85,7 +94,35 @@ fn change_ascii_integer(mut buf:Vec<u8>) -> Vec<u8> {
 }
 
 fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
-  // XXX
+  let (size, endian) = match get_random(8) {
+                         0 | 1 => (1, Endian::Little),
+                         2 => (2, Endian::Little),
+                         3 => (2, Endian::Big),
+                         4 => (4, Endian::Little),
+                         5 => (4, Endian::Big),
+                         6 => (8, Endian::Little),
+                         7 => (8, Endian::Big),
+                         _ => panic!("unreachable code")
+                       };
+  let offset = get_random(buf.len() - size + 1);
+
+  let num: i64 = match endian {
+                   Endian::Little => buf[offset..offset+size].iter()
+                                       .fold(0, |acc, &n| (acc << 8) + n as i64),
+                   Endian::Big => buf[offset..offset+size].iter().rev()
+                                    .fold(0, |acc, &n| (acc << 8) + n as i64)
+                 };
+
+  let new_num = change_integer(num);
+
+  for i in offset..offset+size {
+    let j = i - offset;
+    buf[i] = match endian { // Dirty code...
+               Endian::Little => (new_num >> (8*(size - j - 1))) & 0xff,
+               Endian::Big => (new_num >> (8*j)) & 0xff
+             } as u8;
+  }
+
   buf
 }
 
