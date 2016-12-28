@@ -9,7 +9,7 @@ pub struct Seed {
   filepath: String
 }
 
-static mut seed_count: u32 = 0;
+static mut SEED_COUNT: u32 = 0;
 
 impl Seed {
   pub fn new(conf:&Conf, buf:&Vec<u8>) -> Seed {
@@ -26,8 +26,8 @@ impl Seed {
 
   fn create_seed(conf:&Conf) -> Seed {
     let path = unsafe {
-      seed_count = seed_count + 1;
-      format!("{}/queue/tc-{}", conf.output_dir, seed_count)
+      SEED_COUNT = SEED_COUNT + 1;
+      format!("{}/queue/tc-{}", conf.output_dir, SEED_COUNT)
     };
     Seed { filepath: path }
   }

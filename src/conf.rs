@@ -12,7 +12,7 @@ pub struct Conf {
   pub timeout: u64,
 }
 
-static mut crash_count: u32 = 0;
+static mut CRASH_COUNT: u32 = 0;
 
 impl Conf {
   pub fn new(args:Vec<&str>, output_dir:&str, t:u64, input_path: &str) -> Conf {
@@ -45,8 +45,8 @@ impl Conf {
 
   pub fn save_crash(&self, buf:&Vec<u8>) {
     let path = unsafe {
-      crash_count = crash_count + 1;
-      format!("{}/crash/tc-{}", self.output_dir, crash_count)
+      CRASH_COUNT = CRASH_COUNT + 1;
+      format!("{}/crash/tc-{}", self.output_dir, CRASH_COUNT)
     };
     let mut f = fs::File::create(&path).unwrap();
     f.write_all(buf).unwrap();
