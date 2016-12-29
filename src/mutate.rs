@@ -107,7 +107,7 @@ fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
   buf
 }
 
-fn select_block(buf:&Vec<u8>) -> (usize, usize) {
+fn select_block<T>(buf:&Vec<T>) -> (usize, usize) {
   // XXX: How can I select a uniformly random block
   let size = get_random(buf.len()) + 1;
   if get_random(1) == 0 {
@@ -127,12 +127,36 @@ fn shuffle_block(mut buf:Vec<u8>) -> Vec<u8> {
   buf
 }
 
-fn shuffle_ascii_block(mut buf:Vec<u8>) -> Vec<u8> {
-  // XXX
-  buf
+const delimeters:[u8; 3] = ['\n' as u8, ' ' as u8, '\t' as u8];
+
+fn split_tokens(buf:Vec<u8>) -> Vec<Vec<u8>> {
+  let mut tokens = vec![];
+  let mut token = vec![];
+  for c in buf {
+    if delimeters.contains(&c) {
+      tokens.push(token);
+      token = vec![];
+    } else {
+      token.push(c);
+    }
+  }
+  tokens
 }
 
-// TODO: uniform distribution??
+fn shuffle_ascii_block(mut buf:Vec<u8>) -> Vec<u8> {
+  let mut tokens = split_tokens(buf);
+  let (beg, end) = select_block(&tokens);
+
+  let mut rng = rand::thread_rng();
+  rng.shuffle(&mut tokens[beg..end]);
+
+  let mut new_buf = vec![];
+  for tok in tokens {
+    new_buf.extend(tok);
+  }
+  new_buf
+}
+
 fn overwrite_copy_block(mut buf:Vec<u8>) -> Vec<u8> {
   // XXX
   buf
