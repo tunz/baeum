@@ -1,11 +1,13 @@
 use rand;
 use rand::distributions::{IndependentSample, Range};
-use rand::{thread_rng, Rng};
+use rand::{Rng};
 
 enum Endian {
   Big,
   Little
 }
+
+const DELIMETERS:[u8; 3] = ['\n' as u8, ' ' as u8, '\t' as u8];
 
 fn get_random(sz:usize) -> usize {
   let rnd = Range::new(0, sz);
@@ -69,7 +71,7 @@ fn change_integer(num:i64) -> i64 {
   }
 }
 
-fn change_ascii_integer(mut buf:Vec<u8>) -> Vec<u8> {
+fn change_ascii_integer(buf:Vec<u8>) -> Vec<u8> {
   let offset = match find_close_number(&buf, get_random(buf.len())) {
                  Some(x) => x,
                  None => return buf
@@ -79,10 +81,11 @@ fn change_ascii_integer(mut buf:Vec<u8>) -> Vec<u8> {
   let num = String::from_utf8(buf[beg .. end+1].to_vec()).unwrap().parse::<i64>().unwrap();
   let new_num = change_integer(num);
 
-  let mut ret = buf[0..beg].to_vec(); // Better idea to write this code??
-  ret.extend(new_num.to_string().into_bytes());
-  ret.extend(buf[end+1..].to_vec());
-  ret
+  buf[0..beg].iter()
+    .chain(new_num.to_string().into_bytes().iter())
+    .chain(buf[end+1..].iter())
+    .map(|&x| x)
+    .collect()
 }
 
 fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
@@ -127,13 +130,11 @@ fn shuffle_block(mut buf:Vec<u8>) -> Vec<u8> {
   buf
 }
 
-const delimeters:[u8; 3] = ['\n' as u8, ' ' as u8, '\t' as u8];
-
 fn split_tokens(buf:Vec<u8>) -> Vec<Vec<u8>> {
   let mut tokens = vec![];
   let mut token = vec![];
   for c in buf {
-    if delimeters.contains(&c) {
+    if DELIMETERS.contains(&c) {
       tokens.push(token);
       token = vec![];
     } else {
@@ -143,43 +144,56 @@ fn split_tokens(buf:Vec<u8>) -> Vec<Vec<u8>> {
   tokens
 }
 
-fn shuffle_ascii_block(mut buf:Vec<u8>) -> Vec<u8> {
+fn shuffle_ascii_block(buf:Vec<u8>) -> Vec<u8> {
   let mut tokens = split_tokens(buf);
   let (beg, end) = select_block(&tokens);
 
   let mut rng = rand::thread_rng();
   rng.shuffle(&mut tokens[beg..end]);
 
-  let mut new_buf = vec![];
-  for tok in tokens {
-    new_buf.extend(tok);
-  }
-  new_buf
+  tokens.iter().flat_map(|x| x.clone()).collect()
 }
 
 fn overwrite_copy_block(mut buf:Vec<u8>) -> Vec<u8> {
-  // XXX
+  let (to_beg, to_end) = select_block(&buf);
+  let size = to_end - to_beg;
+  let from_beg = get_random(buf.len() - size);
+  let block = buf[to_beg..to_end].to_vec();
+  for i in 0..size {
+    buf[from_beg + i] = block[i];
+  }
   buf
 }
 
-fn insert_copy_block(mut buf:Vec<u8>) -> Vec<u8> {
-  // XXX
-  buf
+fn insert_copy_block(buf:Vec<u8>) -> Vec<u8> {
+  let (to_beg, to_end) = select_block(&buf);
+  let offset = get_random(buf.len() + 1);
+  let block = buf[to_beg..to_end].to_vec();
+  buf.iter().take(offset).chain(block.iter()).chain(buf.iter().skip(offset))
+    .map(|&x| x).collect()
 }
 
 fn overwrite_const_block(mut buf:Vec<u8>) -> Vec<u8> {
-  // XXX
+  let (to_beg, to_end) = select_block(&buf);
+  let byte = get_random(256) as u8;
+  for i in to_beg..to_end {
+    buf[i] = byte;
+  }
   buf
 }
 
-fn insert_const_block(mut buf:Vec<u8>) -> Vec<u8> {
-  // XXX
-  buf
+fn insert_const_block(buf:Vec<u8>) -> Vec<u8> {
+  let offset = get_random(buf.len());
+  let size = get_random(buf.len()); // Too much?
+  let block = vec![get_random(256) as u8; size];
+  buf.iter().take(offset).chain(block.iter()).chain(buf.iter().skip(offset))
+    .map(|&x| x).collect()
 }
 
-fn remove_block(mut buf:Vec<u8>) -> Vec<u8> {
-  // XXX
-  buf
+fn remove_block(buf:Vec<u8>) -> Vec<u8> {
+  let (to_beg, to_end) = select_block(&buf);
+  buf.iter().take(to_beg).chain(buf.iter().skip(to_end))
+    .map(|&x| x).collect()
 }
 
 fn cross_over(mut buf:Vec<u8>) -> Vec<u8> {
