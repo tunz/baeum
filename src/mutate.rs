@@ -30,19 +30,20 @@ fn is_digit(c:u8) -> bool {
 }
 
 fn find_close_number(buf:&Vec<u8>, offset:usize) -> Option<usize> {
-  let mut i = offset;
+  let mut i = 0;
   let mut ret = None;
 
   if is_digit(buf[offset]) {
     return Some(offset)
   }
 
-  while ret == None && (offset + i < buf.len() || offset - i >= 0) {
+  while ret == None && (offset + i < buf.len() || offset >= i) {
     if offset + i < buf.len() && is_digit(buf[offset + i]) {
       ret = Some(offset + i);
-    } else if offset - i >= 0 && is_digit(buf[offset - i]) {
+    } else if offset >= i && is_digit(buf[offset - i]) {
       ret = Some(offset - i);
     }
+    i += 1;
   }
   ret
 }
@@ -88,12 +89,12 @@ fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
   let endian = if get_random(2) == 0 { Endian::Little } else { Endian::Big };
   let offset = get_random(buf.len() - size + 1);
 
-  let num: i64 = match endian {
-                   Endian::Little => buf[offset..offset+size].iter()
-                                       .fold(0, |acc, &n| (acc << 8) + n as i64),
-                   Endian::Big => buf[offset..offset+size].iter().rev()
-                                    .fold(0, |acc, &n| (acc << 8) + n as i64)
-                 };
+  let num = match endian {
+              Endian::Little => buf[offset..offset+size].iter()
+                                  .fold(0, |acc, &n| (acc << 8) + n as i64),
+              Endian::Big => buf[offset..offset+size].iter().rev()
+                               .fold(0, |acc, &n| (acc << 8) + n as i64)
+            };
 
   let new_num = change_integer(num);
 
@@ -153,18 +154,19 @@ fn cross_over(mut buf:Vec<u8>) -> Vec<u8> {
 pub fn mutate(buf:&Vec<u8>) -> Vec<u8> {
   let new_buf = buf.clone();
 
-  match get_random(11) {
+  match get_random(12) {
     0 => flip_bit(new_buf),
     1 => change_byte(new_buf),
     2 => change_ascii_integer(new_buf),
     3 => change_binary_integer(new_buf),
     4 => shuffle_block(new_buf),
-    5 => overwrite_copy_block(new_buf),
-    6 => insert_copy_block(new_buf),
-    7 => overwrite_const_block(new_buf),
-    8 => insert_const_block(new_buf),
-    9 => remove_block(new_buf),
-    10 => cross_over(new_buf),
+    5 => shuffle_ascii_block(new_buf),
+    6 => overwrite_copy_block(new_buf),
+    7 => insert_copy_block(new_buf),
+    8 => overwrite_const_block(new_buf),
+    9 => insert_const_block(new_buf),
+    10 => remove_block(new_buf),
+    11 => cross_over(new_buf),
     _ => panic!("unreachable code")
   }
 }
