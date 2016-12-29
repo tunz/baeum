@@ -71,18 +71,18 @@ fn change_integer(num:i64) -> i64 {
   }
 }
 
-fn change_ascii_integer(buf:Vec<u8>) -> Vec<u8> {
+fn change_ascii_integer(buf:&Vec<u8>) -> Vec<u8> {
   let offset = match find_close_number(&buf, get_random(buf.len())) {
                  Some(x) => x,
-                 None => return buf
+                 None => return buf.clone()
                };
   let (beg, end) = find_number_range(&buf, offset);
 
   let num = String::from_utf8(buf[beg .. end].to_vec()).unwrap().parse::<i64>().unwrap();
   let new_num = change_integer(num);
 
-  [buf[0..beg], new_num.to_string().into_bytes(), buf[end..]]
-    .iter().flat_map(|x| x.clone()).collect()
+  [&buf[0..beg], new_num.to_string().as_bytes(), &buf[end..]]
+    .iter().flat_map(|x| x.clone()).map(|&x| x).collect()
 }
 
 fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
@@ -127,7 +127,7 @@ fn shuffle_block(mut buf:Vec<u8>) -> Vec<u8> {
   buf
 }
 
-fn split_tokens(buf:Vec<u8>) -> Vec<Vec<u8>> {
+fn split_tokens(buf:&Vec<u8>) -> Vec<Vec<u8>> {
   let mut tokens = vec![];
   let mut token = vec![];
   for c in buf {
@@ -135,13 +135,13 @@ fn split_tokens(buf:Vec<u8>) -> Vec<Vec<u8>> {
       tokens.push(token);
       token = vec![];
     } else {
-      token.push(c);
+      token.push(*c);
     }
   }
   tokens
 }
 
-fn shuffle_ascii_block(buf:Vec<u8>) -> Vec<u8> {
+fn shuffle_ascii_block(buf:&Vec<u8>) -> Vec<u8> {
   let mut tokens = split_tokens(buf);
   let (beg, end) = select_block(&tokens);
 
@@ -162,7 +162,7 @@ fn overwrite_copy_block(mut buf:Vec<u8>) -> Vec<u8> {
   buf
 }
 
-fn insert_copy_block(buf:Vec<u8>) -> Vec<u8> {
+fn insert_copy_block(buf:&Vec<u8>) -> Vec<u8> {
   let (to_beg, to_end) = select_block(&buf);
   let offset = get_random(buf.len() + 1);
   let block = buf[to_beg..to_end].to_vec();
@@ -179,7 +179,7 @@ fn overwrite_const_block(mut buf:Vec<u8>) -> Vec<u8> {
   buf
 }
 
-fn insert_const_block(buf:Vec<u8>) -> Vec<u8> {
+fn insert_const_block(buf:&Vec<u8>) -> Vec<u8> {
   let offset = get_random(buf.len());
   let size = get_random(buf.len()); // Too much?
   let block = vec![get_random(256) as u8; size];
@@ -187,33 +187,31 @@ fn insert_const_block(buf:Vec<u8>) -> Vec<u8> {
     .map(|&x| x).collect()
 }
 
-fn remove_block(buf:Vec<u8>) -> Vec<u8> {
+fn remove_block(buf:&Vec<u8>) -> Vec<u8> {
   let (to_beg, to_end) = select_block(&buf);
   buf.iter().take(to_beg).chain(buf.iter().skip(to_end))
     .map(|&x| x).collect()
 }
 
-fn cross_over(mut buf:Vec<u8>) -> Vec<u8> {
+fn cross_over(buf:&Vec<u8>) -> Vec<u8> {
   // XXX
-  buf
+  buf.clone()
 }
 
 pub fn mutate(buf:&Vec<u8>) -> Vec<u8> {
-  let new_buf = buf.clone();
-
   match get_random(12) {
-    0 => flip_bit(new_buf),
-    1 => change_byte(new_buf),
-    2 => change_ascii_integer(new_buf),
-    3 => change_binary_integer(new_buf),
-    4 => shuffle_block(new_buf),
-    5 => shuffle_ascii_block(new_buf),
-    6 => overwrite_copy_block(new_buf),
-    7 => insert_copy_block(new_buf),
-    8 => overwrite_const_block(new_buf),
-    9 => insert_const_block(new_buf),
-    10 => remove_block(new_buf),
-    11 => cross_over(new_buf),
+    0 => flip_bit(buf.clone()),
+    1 => change_byte(buf.clone()),
+    2 => change_ascii_integer(buf),
+    3 => change_binary_integer(buf.clone()),
+    4 => shuffle_block(buf.clone()),
+    5 => shuffle_ascii_block(buf),
+    6 => overwrite_copy_block(buf.clone()),
+    7 => insert_copy_block(buf),
+    8 => overwrite_const_block(buf.clone()),
+    9 => insert_const_block(buf),
+    10 => remove_block(buf),
+    11 => cross_over(buf),
     _ => panic!("unreachable code")
   }
 }
