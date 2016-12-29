@@ -1,5 +1,6 @@
 use rand;
 use rand::distributions::{IndependentSample, Range};
+use rand::{thread_rng, Rng};
 
 enum Endian {
   Big,
@@ -74,8 +75,8 @@ fn change_ascii_integer(mut buf:Vec<u8>) -> Vec<u8> {
                  None => return buf
                };
   let (beg, end) = find_number_range(&buf, offset);
-  let num = String::from_utf8(buf[beg .. end+1].to_vec()).unwrap().parse::<i64>().unwrap();
 
+  let num = String::from_utf8(buf[beg .. end+1].to_vec()).unwrap().parse::<i64>().unwrap();
   let new_num = change_integer(num);
 
   let mut ret = buf[0..beg].to_vec(); // Better idea to write this code??
@@ -89,13 +90,10 @@ fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
   let endian = if get_random(2) == 0 { Endian::Little } else { Endian::Big };
   let offset = get_random(buf.len() - size + 1);
 
-  let num = match endian {
-              Endian::Little => buf[offset..offset+size].iter()
-                                  .fold(0, |acc, &n| (acc << 8) + n as i64),
-              Endian::Big => buf[offset..offset+size].iter().rev()
-                               .fold(0, |acc, &n| (acc << 8) + n as i64)
+  let num = match (&endian, buf[offset..offset+size].iter()) {
+              (&Endian::Little, iter) => iter.fold(0, |acc, &n| (acc << 8) + n as i64),
+              (&Endian::Big, iter) => iter.rev().fold(0, |acc, &n| (acc << 8) + n as i64)
             };
-
   let new_num = change_integer(num);
 
   for i in offset..offset+size {
@@ -109,9 +107,23 @@ fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
   buf
 }
 
+fn select_block(buf:&Vec<u8>) -> (usize, usize) {
+  // XXX: How can I select a uniformly random block
+  let size = get_random(buf.len()) + 1;
+  if get_random(1) == 0 {
+    let beg = get_random(buf.len());
+    (beg, if beg + size > buf.len() { buf.len() } else { beg + size })
+  } else {
+    let end = get_random(buf.len()) + 1;
+    (if end < size { 0 } else { end - size }, end)
+  }
+}
+
 /* Block Mutation */
 fn shuffle_block(mut buf:Vec<u8>) -> Vec<u8> {
-  // XXX
+  let (beg, end) = select_block(&buf);
+  let mut rng = rand::thread_rng();
+  rng.shuffle(&mut buf[beg..end]);
   buf
 }
 
