@@ -2,6 +2,8 @@ use rand;
 use rand::distributions::{IndependentSample, Range};
 use rand::{Rng};
 
+use seed::Seed;
+
 enum Endian {
   Big,
   Little
@@ -193,12 +195,23 @@ fn remove_block(buf:&Vec<u8>) -> Vec<u8> {
     .map(|&x| x).collect()
 }
 
-fn cross_over(buf:&Vec<u8>) -> Vec<u8> {
-  // XXX
-  buf.clone()
+fn random_split_point(buf1:&Vec<u8>, buf2:&Vec<u8>) -> usize {
+  let mut diffs = buf1.iter().zip(buf2).enumerate().filter(|&(_, (x1, x2))| x1 != x2)
+                .map(|(idx, _)| idx);
+  let beg = diffs.nth(0).unwrap_or(0);
+  let end = diffs.last().unwrap_or(0);
+  get_random(end - beg + 1) + beg
 }
 
-pub fn mutate(buf:&Vec<u8>) -> Vec<u8> {
+fn cross_over(buf:&Vec<u8>, q:&Vec<Seed>) -> Vec<u8> {
+  let buf2 = q[get_random(q.len())].load_buf(); // XXX: avoid the smae
+  let offset = random_split_point(buf, &buf2);
+  let (buf_front, _) = buf.split_at(offset);
+  let (_, buf2_back) = buf2.split_at(offset);
+  buf_front.iter().chain(buf2_back).map(|&x| x).collect()
+}
+
+pub fn mutate(buf:&Vec<u8>, q:&Vec<Seed>) -> Vec<u8> {
   match get_random(12) {
     0 => flip_bit(buf.clone()),
     1 => change_byte(buf.clone()),
@@ -211,7 +224,7 @@ pub fn mutate(buf:&Vec<u8>) -> Vec<u8> {
     8 => overwrite_const_block(buf.clone()),
     9 => insert_const_block(buf),
     10 => remove_block(buf),
-    11 => cross_over(buf),
+    11 => cross_over(buf, q),
     _ => panic!("unreachable code")
   }
 }
