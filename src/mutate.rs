@@ -53,11 +53,11 @@ fn find_close_number(buf:&Vec<u8>, offset:usize) -> Option<usize> {
 
 fn find_number_range(buf:&Vec<u8>, offset:usize) -> (usize, usize) {
   let mut beg = (1..offset+1).rev().find(|&x| !is_digit(buf[x - 1]))
-                  .unwrap_or(offset);
+                  .unwrap_or(0);
   beg = if beg > 0 && buf[beg - 1] == '-' as u8 { beg - 1 } else { beg };
 
-  let end = (offset..buf.len()-1).find(|&x| !is_digit(buf[x + 1]))
-              .unwrap_or(offset);
+  let end = (offset+1..buf.len()).find(|&x| !is_digit(buf[x]))
+              .unwrap_or(buf.len());
 
   (beg, end)
 }
@@ -78,14 +78,11 @@ fn change_ascii_integer(buf:Vec<u8>) -> Vec<u8> {
                };
   let (beg, end) = find_number_range(&buf, offset);
 
-  let num = String::from_utf8(buf[beg .. end+1].to_vec()).unwrap().parse::<i64>().unwrap();
+  let num = String::from_utf8(buf[beg .. end].to_vec()).unwrap().parse::<i64>().unwrap();
   let new_num = change_integer(num);
 
-  buf[0..beg].iter()
-    .chain(new_num.to_string().into_bytes().iter())
-    .chain(buf[end+1..].iter())
-    .map(|&x| x)
-    .collect()
+  [buf[0..beg], new_num.to_string().into_bytes(), buf[end..]]
+    .iter().flat_map(|x| x.clone()).collect()
 }
 
 fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
