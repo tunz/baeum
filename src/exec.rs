@@ -33,14 +33,13 @@ fn exec(conf:&Conf) -> ExecResult {
     None => panic!("Too few command line arguments")
   };
 
+  let mut child = Command::new(prog);
   let mut child = unsafe {
-    Command::new(prog)
-      .args(args)
-      .stdin(Stdio::from_raw_fd(conf.stdin_fd))
-      .stdout(Stdio::null())
-      .stderr(Stdio::null())
-      .spawn()
-      .expect("failed to execute child")
+    child.args(args)
+    .stdout(Stdio::null())
+    .stderr(Stdio::null())
+    .stdin(Stdio::from_raw_fd(conf.stdin_fd))
+    .spawn().expect("failed to execute child")
   };
 
   let one_sec = Duration::from_millis(conf.timeout); // TODO: Use Average timeout

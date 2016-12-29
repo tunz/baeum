@@ -80,15 +80,21 @@ fn change_ascii_integer(buf:&Vec<u8>) -> Vec<u8> {
                };
   let (beg, end) = find_number_range(&buf, offset);
 
-  let num = String::from_utf8(buf[beg .. end].to_vec()).unwrap().parse::<i64>().unwrap();
-  let new_num = change_integer(num);
-
-  [&buf[0..beg], new_num.to_string().as_bytes(), &buf[end..]]
-    .iter().flat_map(|x| x.clone()).map(|&x| x).collect()
+  match String::from_utf8(buf[beg .. end].to_vec()).unwrap().parse::<i64>() {
+    Ok(num) => {
+      let new_num = change_integer(num);
+      [&buf[0..beg], new_num.to_string().as_bytes(), &buf[end..]]
+        .iter().flat_map(|x| x.clone()).map(|&x| x).collect()
+    },
+    Err(_) => {
+      buf.clone() // XXX: No mutation
+    }
+  }
 }
 
 fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
   let size = [1, 2, 4, 8][get_random(4)];
+  let size = if size > buf.len() { 1 } else { size }; // XXX: Handle properly
   let endian = if get_random(2) == 0 { Endian::Little } else { Endian::Big };
   let offset = get_random(buf.len() - size + 1);
 
@@ -129,33 +135,40 @@ fn shuffle_block(mut buf:Vec<u8>) -> Vec<u8> {
   buf
 }
 
-fn split_tokens(buf:&Vec<u8>) -> Vec<Vec<u8>> {
+fn split_tokens(buf:&Vec<u8>) -> (Vec<Vec<u8>>, Vec<u8>) {
   let mut tokens = vec![];
   let mut token = vec![];
+  let mut dms = vec![];
   for c in buf {
     if DELIMETERS.contains(&c) {
       tokens.push(token);
+      dms.push(*c);
       token = vec![];
     } else {
       token.push(*c);
     }
   }
-  tokens
+  tokens.push(token);
+  (tokens, dms)
 }
 
 fn shuffle_ascii_block(buf:&Vec<u8>) -> Vec<u8> {
-  let mut tokens = split_tokens(buf);
+  let (mut tokens, dms) = split_tokens(buf);
   let (beg, end) = select_block(&tokens);
 
   let mut rng = rand::thread_rng();
   rng.shuffle(&mut tokens[beg..end]);
 
-  tokens.iter().flat_map(|x| x.clone()).collect()
+  for (v, d) in tokens.iter_mut().zip(dms) {
+    v.push(d);
+  }
+  tokens.iter().flat_map(|v| v.clone()).collect()
 }
 
 fn overwrite_copy_block(mut buf:Vec<u8>) -> Vec<u8> {
   let (to_beg, to_end) = select_block(&buf);
   let size = to_end - to_beg;
+  if size == buf.len() { return buf } // XXX: No mutation here
   let from_beg = get_random(buf.len() - size);
   let block = buf[to_beg..to_end].to_vec();
   for i in 0..size {
@@ -190,7 +203,9 @@ fn insert_const_block(buf:&Vec<u8>) -> Vec<u8> {
 }
 
 fn remove_block(buf:&Vec<u8>) -> Vec<u8> {
+  if buf.len() <= 1 { return buf.clone() }
   let (to_beg, to_end) = select_block(&buf);
+  if to_end - to_beg == buf.len() { return buf.clone() }
   buf.iter().take(to_beg).chain(buf.iter().skip(to_end))
     .map(|&x| x).collect()
 }
@@ -199,7 +214,7 @@ fn random_split_point(buf1:&Vec<u8>, buf2:&Vec<u8>) -> usize {
   let mut diffs = buf1.iter().zip(buf2).enumerate().filter(|&(_, (x1, x2))| x1 != x2)
                 .map(|(idx, _)| idx);
   let beg = diffs.nth(0).unwrap_or(0);
-  let end = diffs.last().unwrap_or(0);
+  let end = diffs.last().unwrap_or(beg);
   get_random(end - beg + 1) + beg
 }
 
@@ -208,6 +223,7 @@ fn cross_over(buf:&Vec<u8>, q:&Vec<Seed>) -> Vec<u8> {
   let offset = random_split_point(buf, &buf2);
   let (buf_front, _) = buf.split_at(offset);
   let (_, buf2_back) = buf2.split_at(offset);
+  if buf_front.len() + buf2_back.len() < 1 { return buf.clone() }
   buf_front.iter().chain(buf2_back).map(|&x| x).collect()
 }
 
