@@ -3,6 +3,7 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::process;
 use std::os::unix::io::{RawFd, IntoRawFd};
+use std::env;
 
 pub struct Conf {
   pub args: Vec<String>,
@@ -26,13 +27,22 @@ impl Conf {
     fs::create_dir(format!("{}/crash", output_dir)).unwrap();
     let stdin_fd = fs::File::create(format!("{}/.stdin", output_dir)).unwrap().into_raw_fd();
 
+    let input_path = match args.iter().find(|&&s| s == "@@") {
+                       Some(_) => String::from(input_path),
+                       None => format!("{}/.stdin", output_dir)
+                     };
+    let mut args:Vec<String> =  args.iter().map(|&s| if s == "@@" { input_path.clone() }
+                                                     else { String::from(s) }).collect();
+    let qemu_path = match Path::new(&env::args().nth(0).unwrap()).parent() {
+                      Some(p) => format!("{}/qemu-trace-coverage", p.to_str().unwrap()),
+                      None => String::from("/qemu-trace-coverage")
+                    };
+    args.insert(0, qemu_path);
+
     Conf {
-      args: args.iter().map(|&s|
-                              if s == "@@" { String::from(input_path) } // XXX: If target is STDIN?
-                              else { String::from(s) }
-                            ).collect(),
+      args: args,
       output_dir: String::from(output_dir),
-      input_path: String::from(input_path),
+      input_path: input_path,
       stdin_fd: stdin_fd,
       timeout: t,
     }

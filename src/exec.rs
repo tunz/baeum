@@ -1,17 +1,43 @@
 use std::fs;
 use std::io::prelude::*;
-use std::process::{Command, Stdio};
-use std::os::unix::io::{FromRawFd};
-use std::time::Duration;
-
-use wait_timeout::ChildExt;
+use std::env;
+use std::ffi::CString;
+use std::os::raw::{c_char, c_int};
 
 use conf::Conf;
+
+extern {
+  fn initialize_libexec (argc: c_int, args: *const *const c_char, fd: c_int, timeout: u64);
+  fn kill_forkserver();
+  fn exec_fork(timeout: u64) -> c_int;
+}
 
 enum ExecResult {
   CRASH,
   HANG,
   SUCCESS
+}
+
+pub fn initialize(conf:&Conf) {
+  let outputpath = format!("{}/.ret", conf.output_dir);
+  {
+    let mut f = fs::File::create(&outputpath).unwrap();
+    let buf = [0 as u8; 16];
+    f.write_all(&buf).unwrap();
+  }
+  env::set_var("BAEUM_RET_PATH", outputpath);
+
+  let args:Vec<CString> = conf.args.iter()
+                            .map(|ref s| CString::new(s.as_str()).unwrap()).collect();
+  let argv:Vec<*const c_char> = args.iter().map(|ref s| s.as_ptr()).collect();
+  unsafe {
+    initialize_libexec(args.len() as c_int, argv.as_ptr() as *const *const c_char,
+                       conf.stdin_fd as c_int, conf.timeout);
+  }
+}
+
+pub fn finalize() {
+  unsafe { kill_forkserver() };
 }
 
 #[inline(always)]
@@ -27,33 +53,14 @@ fn clear_env(conf:&Conf) {
   let _ = fs::remove_file(&conf.input_path);
 }
 
+// XXX : I want to use enum..
+// Status = Timeout = -1 | Normal = 0 | SIGSEGV = 11 | SIGILL = 4 | SIGFPE = 8 | SIGABRT = 6
 fn exec(conf:&Conf) -> ExecResult {
-  let (prog, args) = match conf.args.split_first() {
-    Some((prog, args)) => (prog, args),
-    None => panic!("Too few command line arguments")
-  };
-
-  let mut child = Command::new(prog);
-  let mut child = unsafe {
-    child.args(args)
-    .stdout(Stdio::null())
-    .stderr(Stdio::null())
-    .stdin(Stdio::from_raw_fd(conf.stdin_fd))
-    .spawn().expect("failed to execute child")
-  };
-
-  let one_sec = Duration::from_millis(conf.timeout); // TODO: Use Average timeout
-  match child.wait_timeout(one_sec).expect("Wait Child") {
-    Some(status) =>
-      match status.unix_signal() {
-        Some(_) => ExecResult::CRASH,
-        None => ExecResult::SUCCESS
-      },
-    None => {
-      child.kill().unwrap();
-      child.wait().unwrap();
-      ExecResult::HANG
-    }
+  let status = unsafe { exec_fork(conf.timeout) };
+  match status {
+    -1 => ExecResult::HANG,
+    0 => ExecResult::SUCCESS,
+    _ => ExecResult::CRASH
   }
 }
 

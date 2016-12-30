@@ -1,0 +1,60 @@
+--- qemu-2.3.0/linux-user/syscall.c.orig	2015-04-27 23:08:26.000000000 +0900
++++ qemu-2.3.0/linux-user/syscall.c	2016-10-02 04:58:11.736049630 +0900
+@@ -115,6 +115,9 @@
+ 
+ #include "qemu.h"
+ 
++extern void baeum_exit(void);
++extern void baeum_close(void);
++
+ #define CLONE_NPTL_FLAGS2 (CLONE_SETTLS | \
+     CLONE_PARENT_SETTID | CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID)
+ 
+@@ -227,7 +227,22 @@
+ _syscall3(int,sys_rt_sigqueueinfo,int,pid,int,sig,siginfo_t *,uinfo)
+ _syscall3(int,sys_syslog,int,type,char*,bufp,int,len)
+ #if defined(TARGET_NR_tgkill) && defined(__NR_tgkill)
+-_syscall3(int,sys_tgkill,int,tgid,int,pid,int,sig)
++
++extern unsigned int afl_forksrv_pid;
++
++static int sys_tgkill(int tgid, int pid, int sig) {
++
++  /* Workaround for -lpthread to make abort() work properly, without
++     killing the forkserver due to a prematurely cached PID. */
++
++  if (afl_forksrv_pid && afl_forksrv_pid == pid &&
++      (sig == SIGABRT || sig == SIGSEGV || sig == SIGFPE || sig == SIGILL))
++    pid = tgid = getpid();
++
++  return syscall(__NR_sys_tgkill, pid, tgid, sig);
++
++}
++
+ #endif
+ #if defined(TARGET_NR_tkill) && defined(__NR_tkill)
+ _syscall2(int,sys_tkill,int,tid,int,sig)
+@@ -4590,6 +4593,7 @@
+                 cpu_set_tls (env, newtls);
+             if (flags & CLONE_CHILD_CLEARTID)
+                 ts->child_tidptr = child_tidptr;
++            baeum_close();
+         } else {
+             fork_end(0);
+         }
+@@ -5561,6 +5565,7 @@
+ #ifdef TARGET_GPROF
+         _mcleanup();
+ #endif
++        baeum_exit();
+         gdb_exit(cpu_env, arg1);
+         _exit(arg1);
+         ret = 0; /* avoid warning */
+@@ -7422,6 +7427,7 @@
+ #ifdef TARGET_GPROF
+         _mcleanup();
+ #endif
++        baeum_exit();
+         gdb_exit(cpu_env, arg1);
+         ret = get_errno(exit_group(arg1));
+         break;

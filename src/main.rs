@@ -1,7 +1,6 @@
 extern crate clap;
 #[macro_use] extern crate log;
 extern crate env_logger;
-extern crate wait_timeout;
 extern crate rand;
 
 use clap::{Arg, App, ArgMatches, AppSettings};
@@ -56,7 +55,9 @@ fn main() {
                 Err(e) => { println!("Error: {}", e); return}
               };
 
+  exec::initialize(&conf);
   fuzz::fuzz(conf, seeds);
+  exec::finalize();
 
   println!("Fuzzing is finished!");
 }

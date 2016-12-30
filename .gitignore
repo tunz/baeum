@@ -1,3 +1,6 @@
 target
 *.swp
 Cargo.lock
+.compiled
+baeum
+qemu-trace-coverage
