@@ -18,13 +18,15 @@ fn get_random(sz:usize) -> usize {
 }
 
 /* Minimal Mutation */
-fn flip_bit(mut buf:Vec<u8>) -> Vec<u8> {
+fn flip_bit(buf:&Vec<u8>) -> Vec<u8> {
+  let mut buf = buf.clone();
   let offset = get_random(buf.len() * 8);
   buf[offset/8] = buf[offset/8] ^ (1 << (offset % 8));
   buf
 }
 
-fn change_byte(mut buf:Vec<u8>) -> Vec<u8> {
+fn change_byte(buf:&Vec<u8>) -> Vec<u8> {
+  let mut buf = buf.clone();
   let offset = get_random(buf.len());
   buf[offset] = get_random(256) as u8;
   buf
@@ -86,13 +88,16 @@ fn change_ascii_integer(buf:&Vec<u8>) -> Vec<u8> {
       [&buf[0..beg], new_num.to_string().as_bytes(), &buf[end..]]
         .iter().flat_map(|x| x.clone()).map(|&x| x).collect()
     },
-    Err(_) => {
-      buf.clone() // XXX: No mutation
+    Err(_) => { // Change a little bit
+      let mut new_buf = buf.clone();
+      new_buf[offset] = (get_random(10) + 0x30) as u8;
+      new_buf
     }
   }
 }
 
-fn change_binary_integer(mut buf:Vec<u8>) -> Vec<u8> {
+fn change_binary_integer(buf:&Vec<u8>) -> Vec<u8> {
+  let mut buf = buf.clone();
   let size = [1, 2, 4, 8][get_random(4)];
   let size = if size > buf.len() { 1 } else { size }; // XXX: Handle properly
   let endian = if get_random(2) == 0 { Endian::Little } else { Endian::Big };
@@ -128,7 +133,8 @@ fn select_block<T>(buf:&Vec<T>) -> (usize, usize) {
 }
 
 /* Block Mutation */
-fn shuffle_block(mut buf:Vec<u8>) -> Vec<u8> {
+fn shuffle_block(buf:&Vec<u8>) -> Vec<u8> {
+  let mut buf = buf.clone();
   let (beg, end) = select_block(&buf);
   let mut rng = rand::thread_rng();
   rng.shuffle(&mut buf[beg..end]);
@@ -165,7 +171,8 @@ fn shuffle_ascii_block(buf:&Vec<u8>) -> Vec<u8> {
   tokens.iter().flat_map(|v| v.clone()).collect()
 }
 
-fn overwrite_copy_block(mut buf:Vec<u8>) -> Vec<u8> {
+fn overwrite_copy_block(buf:&Vec<u8>) -> Vec<u8> {
+  let mut buf = buf.clone();
   let (to_beg, to_end) = select_block(&buf);
   let size = to_end - to_beg;
   if size == buf.len() { return buf } // XXX: No mutation here
@@ -185,7 +192,8 @@ fn insert_copy_block(buf:&Vec<u8>) -> Vec<u8> {
     .map(|&x| x).collect()
 }
 
-fn overwrite_const_block(mut buf:Vec<u8>) -> Vec<u8> {
+fn overwrite_const_block(buf:&Vec<u8>) -> Vec<u8> {
+  let mut buf = buf.clone();
   let (to_beg, to_end) = select_block(&buf);
   let byte = get_random(256) as u8;
   for i in to_beg..to_end {
@@ -229,18 +237,123 @@ fn cross_over(buf:&Vec<u8>, q:&Vec<Seed>) -> Vec<u8> {
 
 pub fn mutate(buf:&Vec<u8>, q:&Vec<Seed>) -> Vec<u8> {
   match get_random(12) {
-    0 => flip_bit(buf.clone()),
-    1 => change_byte(buf.clone()),
+    0 => flip_bit(buf),
+    1 => change_byte(buf),
     2 => change_ascii_integer(buf),
-    3 => change_binary_integer(buf.clone()),
-    4 => shuffle_block(buf.clone()),
+    3 => change_binary_integer(buf),
+    4 => shuffle_block(buf),
     5 => shuffle_ascii_block(buf),
-    6 => overwrite_copy_block(buf.clone()),
+    6 => overwrite_copy_block(buf),
     7 => insert_copy_block(buf),
-    8 => overwrite_const_block(buf.clone()),
+    8 => overwrite_const_block(buf),
     9 => insert_const_block(buf),
     10 => remove_block(buf),
     11 => cross_over(buf, q),
     _ => panic!("unreachable code")
   }
+}
+
+/* Test */
+// XXX: How can we test these random functions?
+
+#[test]
+fn test_flip_bit() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = flip_bit(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+  assert!((buf[0] == new_buf[0] && buf[1] != new_buf[1]) ||
+          (buf[0] != new_buf[0] && buf[1] == new_buf[1]));
+}
+
+#[test]
+fn test_change_byte() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = change_byte(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+  assert!((buf[0] == new_buf[0] && buf[1] != new_buf[1]) ||
+          (buf[0] != new_buf[0] && buf[1] == new_buf[1]));
+}
+
+#[test]
+fn test_change_ascii_integer() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = change_ascii_integer(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+  assert!(buf[0] == new_buf[0] && buf[1] == new_buf[1]);
+
+  let buf = vec![0x30 as u8];
+  let new_buf = change_ascii_integer(&buf);
+  assert!(new_buf.len() > 0);
+  assert_eq!(new_buf.iter().find(|&&x| !is_digit(x) && x != '-' as u8), None);
+}
+
+#[test]
+fn test_change_binary_integer() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = change_binary_integer(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+}
+
+#[test]
+fn test_shuffle_block() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = shuffle_block(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+}
+
+#[test]
+fn test_shuffle_ascii_block() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = shuffle_block(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+
+  let buf = vec![0x30 as u8, 0x0a as u8, 0x31 as u8];
+  let new_buf = shuffle_block(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+
+  let buf = vec![0x0a as u8, 0x31 as u8];
+  let new_buf = shuffle_block(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+
+  let buf = vec![0x0a as u8];
+  let new_buf = shuffle_block(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+  assert_eq!(buf[0], new_buf[0]);
+}
+
+#[test]
+fn test_overwrite_copy_block() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = overwrite_copy_block(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+  assert_eq!(new_buf.iter().find(|&&x| x != 0 as u8 && x != 1 as u8), None);
+}
+
+#[test]
+fn test_insert_copy_block() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = insert_copy_block(&buf);
+  assert!(buf.len() <= new_buf.len());
+  assert_eq!(new_buf.iter().find(|&&x| x != 0 as u8 && x != 1 as u8), None);
+}
+
+#[test]
+fn test_overwrite_const_block() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = overwrite_const_block(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+}
+
+#[test]
+fn test_insert_const_block() {
+  let buf = vec![0 as u8, 1 as u8];
+  let new_buf = insert_const_block(&buf);
+  assert!(buf.len() <= new_buf.len());
+}
+
+#[test]
+fn test_remove_block() {
+  let buf = vec![0 as u8, 1 as u8, 2 as u8];
+  let new_buf = remove_block(&buf);
+  assert!(buf.len() >= new_buf.len());
 }
