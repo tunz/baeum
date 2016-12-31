@@ -4,6 +4,9 @@ extern crate env_logger;
 extern crate rand;
 extern crate memmap;
 extern crate byteorder;
+#[macro_use] extern crate rustful;
+
+use std::thread;
 
 use clap::{Arg, App, ArgMatches, AppSettings};
 mod seed;
@@ -11,6 +14,7 @@ mod mutate;
 mod fuzz;
 mod conf;
 mod exec;
+mod web;
 
 fn arg_parse<'a> () -> ArgMatches<'a> {
   App::new("baeum")
@@ -33,6 +37,10 @@ fn arg_parse<'a> () -> ArgMatches<'a> {
        .short("t")
        .help("Timeout for each execution in milliseconds (default: 1000)")
        .takes_value(true))
+    .arg(Arg::with_name("port")
+       .short("p")
+       .help("Port number for web interface (default: 8000)")
+       .takes_value(true))
     .arg(Arg::from_usage("<args>... 'commands to run'"))
     .get_matches()
 }
@@ -46,6 +54,8 @@ fn main() {
   let args: Vec<&str> = matches.values_of("args").unwrap().collect();
   let t = matches.value_of("timeout").unwrap_or("1000").parse::<u64>()
             .expect("Fail to parse timeout option");
+  let port = matches.value_of("port").unwrap_or("8000").parse::<u16>()
+               .expect("Fail to parse timeout option");
 
   debug!("Seed Dir: {}", seeds_dir);
   debug!("Output Dir: {}", output_dir);
@@ -58,8 +68,12 @@ fn main() {
               };
 
   exec::initialize(&conf);
+  let wserver = thread::spawn(move || {
+                  web::server_start(port);
+                });
   fuzz::fuzz(conf, seeds);
   exec::finalize();
+  let _ = wserver.join();
 
   println!("Fuzzing is finished!");
 }
