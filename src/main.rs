@@ -2,6 +2,8 @@ extern crate clap;
 #[macro_use] extern crate log;
 extern crate env_logger;
 extern crate rand;
+extern crate memmap;
+extern crate byteorder;
 
 use clap::{Arg, App, ArgMatches, AppSettings};
 mod seed;

@@ -13,4 +13,7 @@ $(QEMUDIR)/.compiled:
 	@touch $@
 
 clean:
+	rm -rf ./baeum
+
+cleanall:
 	rm -rf ./baeum ./qemu-trace-coverage $(QEMUDIR)/.compiled

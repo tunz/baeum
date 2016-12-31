@@ -37,6 +37,12 @@ extern unsigned int afl_forksrv_pid;
 #define FORKSRV_FD 198
 #define TSL_FD (FORKSRV_FD - 1)
 
+typedef abi_ulong target_ulong;
+
+extern "C" {
+  void afl_request_tsl(target_ulong, target_ulong, uint64_t, int);
+}
+
 abi_ulong baeum_entry_point; /* ELF entry point (_start) */
 
 static google::dense_hash_set<abi_ulong> global_node_set;
@@ -81,7 +87,8 @@ extern "C" void baeum_exit(void) {
 
     orig_node_cnt = global_node_set.size();
     for (it = node_set.begin(); it != node_set.end(); it++) {
-        global_node_set.insert(*it);
+        if (global_node_set.insert(*it).second)
+            afl_request_tsl(*it, 0, 0, 1);
     }
     *(uint64_t*)node_data = hash;
     *(uint32_t*)(node_data + 8) = nodecount;

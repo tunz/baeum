@@ -1,8 +1,15 @@
+extern crate byteorder;
+extern crate memmap;
+
 use std::fs;
 use std::io::prelude::*;
 use std::env;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
+
+use std::io::Cursor;
+use byteorder::{LittleEndian, ReadBytesExt};
+use memmap::{Mmap, Protection};
 
 use conf::Conf;
 
@@ -10,6 +17,12 @@ extern {
   fn initialize_libexec (argc: c_int, args: *const *const c_char, fd: c_int, timeout: u64);
   fn kill_forkserver();
   fn exec_fork(timeout: u64) -> c_int;
+}
+
+pub struct Feedback {
+  pub exec_id  : u64,
+  pub node    : u32,
+  pub newnode : u32,
 }
 
 enum ExecResult {
@@ -64,11 +77,19 @@ fn exec(conf:&Conf) -> ExecResult {
   }
 }
 
-fn check_interesting() -> bool {
-  true
+fn get_feedback(conf:&Conf) -> Feedback {
+  // Better idea to get feedback? (always opening mmap ..?)
+  let outputpath = format!("{}/.ret", conf.output_dir);
+  let mmap = Mmap::open_path(outputpath, Protection::Read).unwrap();
+  let bytes: &[u8] = unsafe { mmap.as_slice() };
+  let mut buf = Cursor::new(&bytes[..]);
+  let exec_id = buf.read_u64::<LittleEndian>().unwrap();
+  let nodecount = buf.read_u32::<LittleEndian>().unwrap();
+  let newnode = buf.read_u32::<LittleEndian>().unwrap();
+  Feedback { exec_id: exec_id, node: nodecount, newnode: newnode }
 }
 
-pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> bool {
+pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> Feedback {
   setup_env(&conf, &buf);
 
   match exec(&conf) {
@@ -77,5 +98,5 @@ pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> bool {
   };
 
   clear_env(&conf);
-  check_interesting()
+  get_feedback(&conf)
 }

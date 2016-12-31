@@ -47,7 +47,7 @@ unsigned int afl_forksrv_pid;
 static void afl_forkserver(CPUArchState*);
 
 static void afl_wait_tsl(CPUArchState*, int);
-static void afl_request_tsl(target_ulong, target_ulong, uint64_t);
+void afl_request_tsl(target_ulong, target_ulong, uint64_t, int);
 
 static TranslationBlock *tb_find_slow(CPUArchState*, target_ulong,
                                       target_ulong, uint64_t);
@@ -55,6 +55,7 @@ static TranslationBlock *tb_find_slow(CPUArchState*, target_ulong,
 /* Data structure passed around by the translate handlers: */
 
 struct afl_tsl {
+  int global;
   target_ulong pc;
   target_ulong cs_base;
   uint64_t flags;
@@ -136,12 +137,13 @@ static void afl_forkserver(CPUArchState *env) {
    we tell the parent to mirror the operation, so that the next fork() has a
    cached copy. */
 
-static void afl_request_tsl(target_ulong pc, target_ulong cb, uint64_t flags) {
+void afl_request_tsl(target_ulong pc, target_ulong cb, uint64_t flags, int global) {
 
   struct afl_tsl t;
 
   if (!afl_fork_child) return;
 
+  t.global  = global;
   t.pc      = pc;
   t.cs_base = cb;
   t.flags   = flags;
@@ -166,9 +168,10 @@ static void afl_wait_tsl(CPUArchState *env, int fd) {
     if (read(fd, &t, sizeof(struct afl_tsl)) != sizeof(struct afl_tsl))
       break;
 
-    if (t.pc < mmap_next_start)
+    if (t.global)
+        global_node_update(t.pc);
+    else if (t.pc < mmap_next_start)
         tb_find_slow(env, t.pc, t.cs_base, t.flags);
-    global_node_update(t.pc);
 
   }
 

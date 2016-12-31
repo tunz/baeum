@@ -20,7 +20,7 @@
 +
      tb = tb_gen_code(cpu, pc, cs_base, flags, 0);
 
-+    afl_request_tsl(pc, cs_base, flags);
++    afl_request_tsl(pc, cs_base, flags, 0);
 +
   found:
      /* Move the last found TB to the head of the list */
