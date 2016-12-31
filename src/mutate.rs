@@ -104,16 +104,16 @@ fn change_binary_integer(buf:&Vec<u8>) -> Vec<u8> {
   let offset = get_random(buf.len() - size + 1);
 
   let num = match (&endian, buf[offset..offset+size].iter()) {
-              (&Endian::Little, iter) => iter.fold(0, |acc, &n| (acc << 8) + n as i64),
-              (&Endian::Big, iter) => iter.rev().fold(0, |acc, &n| (acc << 8) + n as i64)
+              (&Endian::Little, iter) => iter.rev().fold(0, |acc, &n| (acc << 8) + n as i64),
+              (&Endian::Big, iter) => iter.fold(0, |acc, &n| (acc << 8) + n as i64)
             };
   let new_num = change_integer(num);
 
   for i in offset..offset+size {
     let j = i - offset;
     buf[i] = match endian { // Dirty code...
-               Endian::Little => (new_num >> (8*(size - j - 1))) & 0xff,
-               Endian::Big => (new_num >> (8*j)) & 0xff
+               Endian::Little => (new_num >> (8*j)) & 0xf,
+               Endian::Big => (new_num >> (8*(size - j - 1))) & 0xff
              } as u8;
   }
 
@@ -290,6 +290,10 @@ fn test_change_ascii_integer() {
 #[test]
 fn test_change_binary_integer() {
   let buf = vec![0 as u8, 1 as u8];
+  let new_buf = change_binary_integer(&buf);
+  assert_eq!(buf.len(), new_buf.len());
+
+  let buf = vec![0xff as u8, 0xff as u8, 0xff as u8, 0xff as u8, 0xff as u8, 0xff as u8, 0xff as u8, 0xff as u8];
   let new_buf = change_binary_integer(&buf);
   assert_eq!(buf.len(), new_buf.len());
 }
