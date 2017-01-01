@@ -4,16 +4,22 @@ use std::path::Path;
 use std::process;
 use std::os::unix::io::{RawFd, IntoRawFd};
 use std::env;
+use std::sync::{Arc, RwLock};
+
+pub struct Log {
+  pub seed_count: u32,
+  pub crash_count: u32,
+}
 
 pub struct Conf {
   pub args: Vec<String>,
   pub input_path: String,
   pub output_dir: String,
+  pub path_base: String,
   pub stdin_fd: RawFd,
   pub timeout: u64,
+  pub log: Arc<RwLock<Log>>
 }
-
-static mut CRASH_COUNT: u32 = 0;
 
 impl Conf {
   pub fn new(args:Vec<&str>, output_dir:&str, t:u64, input_path: &str) -> Conf {
@@ -33,18 +39,23 @@ impl Conf {
                      };
     let mut args:Vec<String> =  args.iter().map(|&s| if s == "@@" { input_path.clone() }
                                                      else { String::from(s) }).collect();
-    let qemu_path = match Path::new(&env::args().nth(0).unwrap()).parent() {
-                      Some(p) => format!("{}/qemu-trace-coverage", p.to_str().unwrap()),
-                      None => String::from("/qemu-trace-coverage")
+    let path_base = match Path::new(&env::args().nth(0).unwrap()).parent() {
+                      Some(p) => String::from(p.to_str().unwrap()),
+                      None => "".into()
                     };
+    let qemu_path = format!("{}/qemu-trace-coverage", path_base);
     args.insert(0, qemu_path);
+
+    let log = Arc::new(RwLock::new(Log { seed_count: 0, crash_count: 0 }));
 
     Conf {
       args: args,
       output_dir: String::from(output_dir),
       input_path: input_path,
+      path_base: path_base,
       stdin_fd: stdin_fd,
       timeout: t,
+      log: log,
     }
   }
 
@@ -54,10 +65,12 @@ impl Conf {
   }
 
   pub fn save_crash(&self, buf:&Vec<u8>) {
-    let path = unsafe {
-      CRASH_COUNT = CRASH_COUNT + 1;
-      format!("{}/crash/tc-{}", self.output_dir, CRASH_COUNT)
+    let crash_count = {
+      let mut log = self.log.write().unwrap();
+      log.crash_count = log.crash_count + 1;
+      log.crash_count
     };
+    let path = format!("{}/crash/tc-{}", self.output_dir, crash_count);
     let mut f = fs::File::create(&path).unwrap();
     f.write_all(buf).unwrap();
   }

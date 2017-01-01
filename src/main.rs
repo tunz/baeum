@@ -68,9 +68,13 @@ fn main() {
               };
 
   exec::initialize(&conf);
+
+  let path_base = conf.path_base.clone();
+  let log = conf.log.clone();
   let wserver = thread::spawn(move || {
-                  web::server_start(port);
+                  web::server_start(port, path_base, log);
                 });
+
   fuzz::fuzz(conf, seeds);
   exec::finalize();
   let _ = wserver.join();

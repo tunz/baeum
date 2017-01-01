@@ -1,25 +1,41 @@
 use std::error::Error;
+use std::io::{self, Read};
+use std::fs::File;
+use std::path::Path;
+use std::sync::{Arc, RwLock};
 
+use rustful;
 use rustful::{Server, Context, Response, TreeRouter};
 
-fn say_hello(context: Context, response: Response) {
-    let person = match context.variables.get("person") {
-        Some(name) => name,
-        None => "stranger".into()
-    };
+use conf;
 
-    response.send(format!("Hello, {}!", person));
+fn read_string<P: AsRef<Path>>(path: P) -> io::Result<String> {
+    let mut string = String::new();
+    File::open(path).and_then(|mut f| f.read_to_string(&mut string)).map(|_| string)
 }
 
-pub fn server_start(port:u16) {
+fn say_hello(context: Context, response: Response, log:&Arc<RwLock<conf::Log>>) {
+    let (seed_count, crash_count) = { let log = log.read().unwrap(); (log.seed_count, log.crash_count) };
+
+    response.send(format!("Seed Count: {}<br/>Crash Count: {}", seed_count, crash_count));
+}
+
+struct Handler(fn(Context, Response, &Arc<RwLock<conf::Log>>), Arc<RwLock<conf::Log>>);
+
+impl rustful::Handler for Handler {
+    fn handle_request(&self, context: Context, response: Response) {
+        self.0(context, response, &self.1);
+    }
+}
+
+pub fn server_start(port:u16, path_base:String, log:Arc<RwLock<conf::Log>>) {
+  // let page = read_string(format!("{}/ui/index.html", path_base)).unwrap();
   let server_result = Server {
     host: port.into(),
 
     handlers: insert_routes!{
       TreeRouter::new() => {
-        Get: say_hello,
-
-        ":person" => Get: say_hello
+        Get: Handler(say_hello, log.clone())
       }
     },
 
