@@ -92,7 +92,7 @@ extern "C" void baeum_exit(void) {
     }
     *(uint64_t*)node_data = hash;
     *(uint32_t*)(node_data + 8) = nodecount;
-    *(uint32_t*)(node_data + 12) = (uint32_t)(node_set.size() - orig_node_cnt);
+    *(uint32_t*)(node_data + 12) = (uint32_t)(global_node_set.size() - orig_node_cnt);
     munmap(node_data, 16);
 }
 
