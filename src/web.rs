@@ -4,10 +4,18 @@ use std::fs::File;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use rustc_serialize::json;
 use rustful::{Server, Context, Response, Handler, TreeRouter, StatusCode};
+use rustful::header::ContentType;
 use rustful::file::check_path;
 
 use conf;
+
+#[derive(RustcDecodable, RustcEncodable)]
+pub struct IdValue  {
+  id: String,
+  value: String,
+}
 
 enum Api {
   Hello { page: String },
@@ -28,7 +36,10 @@ impl Handler for Api {
       },
       Api::Info { ref log } => {
         let (seed_count, crash_count) = { let log = log.read().unwrap(); (log.seed_count, log.crash_count) };
-        response.send(format!("Seed Count: {}<br/>Crash Count: {}", seed_count, crash_count));
+        response.headers_mut().set(ContentType(content_type!(Application / Json; Charset = Utf8)));
+        let object = vec![IdValue { id: "seed_count".to_string(), value: seed_count.to_string() },
+                          IdValue { id: "crash_count".to_string(), value: crash_count.to_string() }];
+        response.send(json::encode(&object).unwrap());
       },
       Api::File => {
         if let Some(file) = context.variables.get("file") {

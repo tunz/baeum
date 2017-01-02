@@ -5,6 +5,7 @@ extern crate rand;
 extern crate memmap;
 extern crate byteorder;
 #[macro_use] extern crate rustful;
+extern crate rustc_serialize;
 
 use std::thread;
 
