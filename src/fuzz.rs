@@ -8,11 +8,13 @@ fn fuzz_one(conf:&Conf, seed:&Seed, q:&Vec<Seed>) -> Vec<Seed> {
     let mut new_seeds = vec![];
     let content = seed.load_buf();
 
-    let mutated_content = mutate::mutate(&content, q);
-    let feedback = exec::run_target(&conf, &mutated_content);
-    if feedback.newnode > 0 {
-        let new_seed = Seed::new(conf, &mutated_content);
-        new_seeds.push(new_seed);
+    for _ in 0..10 {
+        let content = mutate::mutate(&content, q);
+        let feedback = exec::run_target(&conf, &content);
+        if feedback.newnode > 0 {
+            let new_seed = Seed::new(conf, &content);
+            new_seeds.push(new_seed);
+        }
     }
 
     new_seeds
