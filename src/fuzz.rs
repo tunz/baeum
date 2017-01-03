@@ -5,27 +5,27 @@ use mutate;
 use exec;
 
 fn fuzz_one(conf:&Conf, seed:&Seed, q:&Vec<Seed>) -> Vec<Seed> {
-  let mut new_seeds = vec![];
-  let content = seed.load_buf();
+    let mut new_seeds = vec![];
+    let content = seed.load_buf();
 
-  let mutated_content = mutate::mutate(&content, q);
-  let feedback = exec::run_target(&conf, &mutated_content);
-  if feedback.newnode > 0 {
-    let new_seed = Seed::new(conf, &mutated_content);
-    new_seeds.push(new_seed);
-  }
+    let mutated_content = mutate::mutate(&content, q);
+    let feedback = exec::run_target(&conf, &mutated_content);
+    if feedback.newnode > 0 {
+        let new_seed = Seed::new(conf, &mutated_content);
+        new_seeds.push(new_seed);
+    }
 
-  new_seeds
+    new_seeds
 }
 
 pub fn fuzz(conf:Conf, seeds:Vec<Seed>) {
-  let mut q = seeds;
+    let mut q = seeds;
 
-  loop {
-    let new_seeds = {
-      let seed = &q[get_random(q.len())];
-      fuzz_one(&conf, seed, &q)
-    };
-    q.extend(new_seeds);
-  }
+    loop {
+        let new_seeds = {
+            let seed = &q[get_random(q.len())];
+            fuzz_one(&conf, seed, &q)
+        };
+        q.extend(new_seeds);
+    }
 }
