@@ -1,5 +1,6 @@
 use seed::Seed;
 use conf::Conf;
+use utils::get_random;
 use mutate;
 use exec;
 
@@ -21,12 +22,10 @@ pub fn fuzz(conf:Conf, seeds:Vec<Seed>) {
   let mut q = seeds;
 
   loop {
-    let mut cur = 0; // TODO: scheduling?
-
-    while cur < q.len() {
-      let new_seeds = fuzz_one(&conf, &q[cur], &q);
-      q.extend(new_seeds);
-      cur += 1;
-    }
+    let new_seeds = {
+      let seed = &q[get_random(q.len())];
+      fuzz_one(&conf, seed, &q)
+    };
+    q.extend(new_seeds);
   }
 }

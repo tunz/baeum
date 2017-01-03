@@ -16,6 +16,7 @@ mod fuzz;
 mod conf;
 mod exec;
 mod web;
+mod utils;
 
 fn arg_parse<'a> () -> ArgMatches<'a> {
   App::new("baeum")

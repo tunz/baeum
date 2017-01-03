@@ -1,8 +1,8 @@
 use rand;
-use rand::distributions::{IndependentSample, Range};
 use rand::{Rng};
 
 use seed::Seed;
+use utils::get_random;
 
 enum Endian {
   Big,
@@ -10,12 +10,6 @@ enum Endian {
 }
 
 const DELIMETERS:[u8; 3] = ['\n' as u8, ' ' as u8, '\t' as u8];
-
-fn get_random(sz:usize) -> usize {
-  let rnd = Range::new(0, sz);
-  let mut rng = rand::thread_rng();
-  rnd.ind_sample(&mut rng)
-}
 
 /* Minimal Mutation */
 fn flip_bit(buf:&Vec<u8>) -> Vec<u8> {
