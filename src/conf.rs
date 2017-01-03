@@ -13,6 +13,7 @@ pub struct Log {
     pub crash_count: u32,
     pub start_time: SystemTime,
     pub exec_count: u64,
+    pub total_node: u32,
 }
 
 pub struct Conf {
@@ -32,6 +33,7 @@ impl Log {
             crash_count: 0,
             start_time: SystemTime::now(),
             exec_count: 0,
+            total_node: 0,
         }
     }
 }

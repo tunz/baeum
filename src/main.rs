@@ -74,6 +74,8 @@ fn main() {
 
     exec::initialize(&conf);
 
+    fuzz::dry_run(&conf, &seeds);
+
     let path_base = conf.path_base.clone();
     let log = conf.log.clone();
     let wserver = thread::spawn(move || {

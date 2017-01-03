@@ -49,6 +49,7 @@ impl Handler for Api {
                 response.headers_mut().set(ContentType(content_type!(Application / Json; Charset = Utf8)));
                 let object = vec![IdValue { id: "seed_count".to_string(), value: log.seed_count.to_string() },
                                   IdValue { id: "crash_count".to_string(), value: log.crash_count.to_string() },
+                                  IdValue { id: "total_node".to_string(), value: log.total_node.to_string() },
                                   IdValue { id: "time".to_string(), value: sec_to_timef(t) },
                                   IdValue { id: "execspeed".to_string(), value: execspeed.to_string() }];
                 response.send(json::encode(&object).unwrap());

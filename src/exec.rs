@@ -97,11 +97,6 @@ pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> Feedback {
         _ => (),
     };
 
-    {
-        let mut log = conf.log.write().unwrap();
-        log.exec_count = log.exec_count + 1;
-    }
-
     clear_env(&conf);
     get_feedback(&conf)
 }
