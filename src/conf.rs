@@ -5,10 +5,13 @@ use std::process;
 use std::os::unix::io::{RawFd, IntoRawFd};
 use std::env;
 use std::sync::{Arc, RwLock};
+use std::time::SystemTime;
 
 pub struct Log {
   pub seed_count: u32,
   pub crash_count: u32,
+  pub start_time: SystemTime,
+  pub exec_count: u64,
 }
 
 pub struct Conf {
@@ -19,6 +22,17 @@ pub struct Conf {
   pub stdin_fd: RawFd,
   pub timeout: u64,
   pub log: Arc<RwLock<Log>>
+}
+
+impl Log {
+  pub fn new() -> Self {
+    Log {
+      seed_count: 0,
+      crash_count: 0,
+      start_time: SystemTime::now(),
+      exec_count: 0,
+    }
+  }
 }
 
 impl Conf {
@@ -46,7 +60,7 @@ impl Conf {
     let qemu_path = format!("{}/qemu-trace-coverage", path_base);
     args.insert(0, qemu_path);
 
-    let log = Arc::new(RwLock::new(Log { seed_count: 0, crash_count: 0 }));
+    let log = Arc::new(RwLock::new(Log::new()));
 
     Conf {
       args: args,

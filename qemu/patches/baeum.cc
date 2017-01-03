@@ -78,7 +78,6 @@ extern "C" void baeum_close(void) {
 }
 
 extern "C" void baeum_exit(void) {
-    int32_t nodecount = node_set.size();
     int32_t orig_node_cnt;
     google::dense_hash_set<abi_ulong>::iterator it;
 
@@ -91,7 +90,7 @@ extern "C" void baeum_exit(void) {
             afl_request_tsl(*it, 0, 0, 1);
     }
     *(uint64_t*)node_data = hash;
-    *(uint32_t*)(node_data + 8) = nodecount;
+    *(uint32_t*)(node_data + 8) = (uint32_t)node_set.size();
     *(uint32_t*)(node_data + 12) = (uint32_t)(global_node_set.size() - orig_node_cnt);
     munmap(node_data, 16);
 }
