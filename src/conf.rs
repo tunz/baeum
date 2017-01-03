@@ -7,6 +7,7 @@ use std::env;
 use std::sync::{Arc, RwLock};
 use std::time::SystemTime;
 
+#[derive(Clone)]
 pub struct Log {
   pub seed_count: u32,
   pub crash_count: u32,

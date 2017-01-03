@@ -43,7 +43,7 @@ impl Handler for Api {
         response.send(page.as_str());
       },
       Api::Info { ref log } => {
-        let log = { let log = log.read().unwrap(); log };
+        let log = { let log = log.read().unwrap(); (*log).clone() };
         let t = log.start_time.elapsed().unwrap().as_secs();
         let execspeed = if t == 0 { 0 } else { log.exec_count / t };
         response.headers_mut().set(ContentType(content_type!(Application / Json; Charset = Utf8)));

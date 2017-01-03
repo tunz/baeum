@@ -84,6 +84,8 @@ extern "C" void baeum_exit(void) {
     if (!baeum_start)
         return;
 
+    baeum_start = 0;
+
     orig_node_cnt = global_node_set.size();
     for (it = node_set.begin(); it != node_set.end(); it++) {
         if (global_node_set.insert(*it).second)
@@ -92,7 +94,6 @@ extern "C" void baeum_exit(void) {
     *(uint64_t*)node_data = hash;
     *(uint32_t*)(node_data + 8) = (uint32_t)node_set.size();
     *(uint32_t*)(node_data + 12) = (uint32_t)(global_node_set.size() - orig_node_cnt);
-    munmap(node_data, 16);
 }
 
 static inline void baeum_update_hash(register abi_ulong addr) {
