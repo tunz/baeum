@@ -35,7 +35,7 @@ fn find_close_number(buf:&Vec<u8>, offset:usize) -> Option<usize> {
     let mut ret = None;
 
     if is_digit(buf[offset]) {
-        return Some(offset)
+        return Some(offset);
     }
 
     while ret == None && (offset + i < buf.len() || offset >= i) {
@@ -65,14 +65,14 @@ fn change_integer(num:i64) -> i64 {
         0 => num + get_random(30) as i64 + 1,
         1 => num - get_random(30) as i64 - 1,
         2 => 0xffffffff, // XXX: dictionary?
-        _ => panic!("unreachable code")
+        _ => panic!("unreachable code"),
     }
 }
 
 fn change_ascii_integer(buf:&Vec<u8>) -> Vec<u8> {
     let offset = match find_close_number(&buf, get_random(buf.len())) {
                      Some(x) => x,
-                     None => return buf.clone()
+                     None => return buf.clone(),
                  };
     let (beg, end) = find_number_range(&buf, offset);
 
@@ -86,7 +86,7 @@ fn change_ascii_integer(buf:&Vec<u8>) -> Vec<u8> {
             let mut new_buf = buf.clone();
             new_buf[offset] = (get_random(10) + 0x30) as u8;
             new_buf
-        }
+        },
     }
 }
 
@@ -98,17 +98,17 @@ fn change_binary_integer(buf:&Vec<u8>) -> Vec<u8> {
     let offset = get_random(buf.len() - size + 1);
 
     let num = match (&endian, buf[offset..offset+size].iter()) {
-                  (&Endian::Little, iter) => iter.rev().fold(0, |acc, &n| (acc << 8) + n as i64),
-                  (&Endian::Big, iter) => iter.fold(0, |acc, &n| (acc << 8) + n as i64)
-              };
+        (&Endian::Little, iter) => iter.rev().fold(0, |acc, &n| (acc << 8) + n as i64),
+        (&Endian::Big, iter) => iter.fold(0, |acc, &n| (acc << 8) + n as i64),
+    };
     let new_num = change_integer(num);
 
     for i in offset..offset+size {
         let j = i - offset;
         buf[i] = match endian { // Dirty code...
-                     Endian::Little => (new_num >> (8*j)) & 0xf,
-                     Endian::Big => (new_num >> (8*(size - j - 1))) & 0xff
-                 } as u8;
+            Endian::Little => (new_num >> (8*j)) & 0xff,
+            Endian::Big => (new_num >> (8*(size - j - 1))) & 0xff,
+        } as u8;
     }
 
     buf
@@ -169,7 +169,7 @@ fn overwrite_copy_block(buf:&Vec<u8>) -> Vec<u8> {
     let mut buf = buf.clone();
     let (to_beg, to_end) = select_block(&buf);
     let size = to_end - to_beg;
-    if size == buf.len() { return buf } // XXX: No mutation here
+    if size == buf.len() { return buf; } // XXX: No mutation here
     let from_beg = get_random(buf.len() - size);
     let block = buf[to_beg..to_end].to_vec();
     for i in 0..size {
@@ -205,9 +205,9 @@ fn insert_const_block(buf:&Vec<u8>) -> Vec<u8> {
 }
 
 fn remove_block(buf:&Vec<u8>) -> Vec<u8> {
-    if buf.len() <= 1 { return buf.clone() }
+    if buf.len() <= 1 { return buf.clone(); }
     let (to_beg, to_end) = select_block(&buf);
-    if to_end - to_beg == buf.len() { return buf.clone() }
+    if to_end - to_beg == buf.len() { return buf.clone(); }
     buf.iter().take(to_beg).chain(buf.iter().skip(to_end))
         .map(|&x| x).collect()
 }
@@ -225,7 +225,7 @@ fn cross_over(buf:&Vec<u8>, q:&Vec<Seed>) -> Vec<u8> {
     let offset = random_split_point(buf, &buf2);
     let (buf_front, _) = buf.split_at(offset);
     let (_, buf2_back) = buf2.split_at(offset);
-    if buf_front.len() + buf2_back.len() < 1 { return buf.clone() }
+    if buf_front.len() + buf2_back.len() < 1 { return buf.clone(); }
     buf_front.iter().chain(buf2_back).map(|&x| x).collect()
 }
 
@@ -243,7 +243,7 @@ pub fn mutate(buf:&Vec<u8>, q:&Vec<Seed>) -> Vec<u8> {
         9 => insert_const_block(buf),
         10 => remove_block(buf),
         11 => cross_over(buf, q),
-        _ => panic!("unreachable code")
+        _ => panic!("unreachable code"),
     }
 }
 

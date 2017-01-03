@@ -49,15 +49,15 @@ impl Conf {
         let stdin_fd = fs::File::create(format!("{}/.stdin", output_dir)).unwrap().into_raw_fd();
 
         let input_path = match args.iter().find(|&&s| s == "@@") {
-                             Some(_) => String::from(input_path),
-                             None => format!("{}/.stdin", output_dir)
-                         };
-        let mut args:Vec<String> = args.iter().map(|&s| if s == "@@" { input_path.clone() }
-                                                        else { String::from(s) }).collect();
+            Some(_) => String::from(input_path),
+            None => format!("{}/.stdin", output_dir),
+        };
+        let mut args = args.iter().map(|&s| if s == "@@" { input_path.clone() }
+                                            else { String::from(s) }).collect::<Vec<String>>();
         let path_base = match Path::new(&env::args().nth(0).unwrap()).parent() {
-                            Some(p) => String::from(p.to_str().unwrap()),
-                            None => "".into()
-                        };
+            Some(p) => String::from(p.to_str().unwrap()),
+            None => "".into(),
+        };
         let qemu_path = format!("{}/qemu-trace-coverage", path_base);
         args.insert(0, qemu_path);
 

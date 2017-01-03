@@ -73,7 +73,7 @@ impl Handler for Api {
                 } else {
                     response.set_status(StatusCode::Forbidden);
                 }
-            }
+            },
         }
     }
 }
@@ -98,6 +98,6 @@ pub fn server_start(port:u16, path_base:String, log:Arc<RwLock<conf::Log>>) {
 
     match server_result {
         Ok(_server) => {},
-        Err(e) => error!("could not start server: {}", e.description())
+        Err(e) => error!("could not start server: {}", e.description()),
     }
 }

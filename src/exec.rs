@@ -40,9 +40,9 @@ pub fn initialize(conf:&Conf) {
     }
     env::set_var("BAEUM_RET_PATH", outputpath);
 
-    let args:Vec<CString> = conf.args.iter()
-                                .map(|ref s| CString::new(s.as_str()).unwrap()).collect();
-    let argv:Vec<*const c_char> = args.iter().map(|ref s| s.as_ptr()).collect();
+    let args = conf.args.iter()
+                   .map(|ref s| CString::new(s.as_str()).unwrap()).collect::<Vec<CString>>();
+    let argv = args.iter().map(|ref s| s.as_ptr()).collect::<Vec<*const c_char>>();
     unsafe {
         initialize_libexec(args.len() as c_int, argv.as_ptr() as *const *const c_char,
                            conf.stdin_fd as c_int, conf.timeout);
@@ -73,7 +73,7 @@ fn exec(conf:&Conf) -> ExecResult {
     match status {
         -1 => ExecResult::HANG,
         0 => ExecResult::SUCCESS,
-        _ => ExecResult::CRASH
+        _ => ExecResult::CRASH,
     }
 }
 
@@ -94,7 +94,7 @@ pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> Feedback {
 
     match exec(&conf) {
         ExecResult::CRASH => conf.save_crash(&buf),
-        _ => ()
+        _ => (),
     };
 
     {
