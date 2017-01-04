@@ -92,11 +92,14 @@ fn get_feedback(conf:&Conf) -> Feedback {
 pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> Feedback {
     setup_env(&conf, &buf);
 
-    match exec(&conf) {
-        ExecResult::CRASH => conf.save_crash(&buf),
+    let status = exec(&conf);
+    let feedback = get_feedback(&conf);
+
+    match status {
+        ExecResult::CRASH => conf.save_crash(&buf, &feedback),
         _ => (),
     };
 
     clear_env(&conf);
-    get_feedback(&conf)
+    feedback
 }

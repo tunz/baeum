@@ -33,7 +33,7 @@ fn sec_to_timef(secs: u64) -> String {
     let hour = (secs / 3600) % 24;
     let min = (secs / 60) % 60;
     let sec = secs % 60;
-    format!("{} days, {}:{}:{}", day, hour, min, sec)
+    format!("{} days, {:02}:{:02}:{:02}", day, hour, min, sec)
 }
 
 impl Handler for Api {
@@ -49,6 +49,7 @@ impl Handler for Api {
                 response.headers_mut().set(ContentType(content_type!(Application / Json; Charset = Utf8)));
                 let object = vec![IdValue { id: "seed_count".to_string(), value: log.seed_count.to_string() },
                                   IdValue { id: "crash_count".to_string(), value: log.crash_count.to_string() },
+                                  IdValue { id: "uniq_crash_count".to_string(), value: log.uniq_crash_count.to_string() },
                                   IdValue { id: "total_node".to_string(), value: log.total_node.to_string() },
                                   IdValue { id: "time".to_string(), value: sec_to_timef(t) },
                                   IdValue { id: "execspeed".to_string(), value: execspeed.to_string() }];

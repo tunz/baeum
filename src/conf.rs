@@ -6,11 +6,16 @@ use std::os::unix::io::{RawFd, IntoRawFd};
 use std::env;
 use std::sync::{Arc, RwLock};
 use std::time::SystemTime;
+use std::collections::HashSet;
+
+use exec;
 
 #[derive(Clone)]
 pub struct Log {
     pub seed_count: u32,
     pub crash_count: u32,
+    pub uniq_crash_count: u32,
+    pub crash_paths: HashSet<u64>,
     pub start_time: SystemTime,
     pub exec_count: u64,
     pub total_node: u32,
@@ -31,6 +36,8 @@ impl Log {
         Log {
             seed_count: 0,
             crash_count: 0,
+            uniq_crash_count: 0,
+            crash_paths: HashSet::new(),
             start_time: SystemTime::now(),
             exec_count: 0,
             total_node: 0,
@@ -81,13 +88,18 @@ impl Conf {
         Conf::new(args, output_dir, t, &filepath)
     }
 
-    pub fn save_crash(&self, buf:&Vec<u8>) {
-        let crash_count = {
+    pub fn save_crash(&self, buf:&Vec<u8>, feedback:&exec::Feedback) {
+        let crash_num = {
             let mut log = self.log.write().unwrap();
-            log.crash_count = log.crash_count + 1;
-            log.crash_count
+            log.crash_count += 1;
+            if log.crash_paths.insert(feedback.exec_id) {
+                log.uniq_crash_count += 1;
+                log.uniq_crash_count
+            } else {
+                return;
+            }
         };
-        let path = format!("{}/crash/tc-{}", self.output_dir, crash_count);
+        let path = format!("{}/crash/tc-{}", self.output_dir, crash_num);
         let mut f = fs::File::create(&path).unwrap();
         f.write_all(buf).unwrap();
     }
