@@ -92,7 +92,7 @@ impl Conf {
         let crash_num = {
             let mut log = self.log.write().unwrap();
             log.crash_count += 1;
-            if log.crash_paths.insert(feedback.exec_id) {
+            if log.crash_paths.insert(feedback.subpath) {
                 log.uniq_crash_count += 1;
                 log.uniq_crash_count
             } else {

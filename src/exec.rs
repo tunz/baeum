@@ -20,9 +20,10 @@ extern {
 }
 
 pub struct Feedback {
-    pub exec_id    : u64,
-    pub node        : u32,
-    pub newnode : u32,
+    pub exec_id: u64,
+    pub subpath: u64,
+    pub node: u32,
+    pub newnode: u32,
 }
 
 enum ExecResult {
@@ -35,7 +36,7 @@ pub fn initialize(conf:&Conf) {
     let outputpath = format!("{}/.ret", conf.output_dir);
     {
         let mut f = fs::File::create(&outputpath).unwrap();
-        let buf = [0 as u8; 16];
+        let buf = [0 as u8; 24];
         f.write_all(&buf).unwrap();
     }
     env::set_var("BAEUM_RET_PATH", outputpath);
@@ -84,9 +85,10 @@ fn get_feedback(conf:&Conf) -> Feedback {
     let bytes: &[u8] = unsafe { mmap.as_slice() };
     let mut buf = Cursor::new(&bytes[..]);
     let exec_id = buf.read_u64::<LittleEndian>().unwrap();
+    let subpath = buf.read_u64::<LittleEndian>().unwrap();
     let nodecount = buf.read_u32::<LittleEndian>().unwrap();
     let newnode = buf.read_u32::<LittleEndian>().unwrap();
-    Feedback { exec_id: exec_id, node: nodecount, newnode: newnode }
+    Feedback { exec_id: exec_id, subpath: subpath, node: nodecount, newnode: newnode }
 }
 
 pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> Feedback {

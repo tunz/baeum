@@ -4,7 +4,7 @@
  #include "qemu-common.h"
  #include "target_signal.h"
  
-+extern void baeum_exit(void);
++extern void baeum_exit(int);
 +
  //#define DEBUG_SIGNAL
  
@@ -13,7 +13,7 @@
          getrlimit(RLIMIT_CORE, &nodump);
          nodump.rlim_cur=0;
          setrlimit(RLIMIT_CORE, &nodump);
-+        baeum_exit();
++        baeum_exit(1);
          (void) fprintf(stderr, "qemu: uncaught target signal %d (%s) - %s\n",
              target_sig, strsignal(host_sig), "core dumped" );
      }

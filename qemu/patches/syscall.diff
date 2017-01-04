@@ -4,7 +4,7 @@
  
  #include "qemu.h"
  
-+extern void baeum_exit(void);
++extern void baeum_exit(int);
 +extern void baeum_close(void);
 +
  #define CLONE_NPTL_FLAGS2 (CLONE_SETTLS | \
@@ -46,7 +46,7 @@
  #ifdef TARGET_GPROF
          _mcleanup();
  #endif
-+        baeum_exit();
++        baeum_exit(0);
          gdb_exit(cpu_env, arg1);
          _exit(arg1);
          ret = 0; /* avoid warning */
@@ -54,7 +54,7 @@
  #ifdef TARGET_GPROF
          _mcleanup();
  #endif
-+        baeum_exit();
++        baeum_exit(0);
          gdb_exit(cpu_env, arg1);
          ret = get_errno(exit_group(arg1));
          break;
