@@ -26,7 +26,7 @@ pub struct Feedback {
     pub newnode: u32,
 }
 
-enum ExecResult {
+pub enum ExecResult {
     CRASH,
     HANG,
     SUCCESS
@@ -91,7 +91,7 @@ fn get_feedback(conf:&Conf) -> Feedback {
     Feedback { exec_id: exec_id, subpath: subpath, node: nodecount, newnode: newnode }
 }
 
-pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> Feedback {
+pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> (ExecResult, Feedback) {
     setup_env(&conf, &buf);
 
     let status = exec(&conf);
@@ -103,5 +103,12 @@ pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> Feedback {
     };
 
     clear_env(&conf);
-    feedback
+    (status, feedback)
+}
+
+pub fn is_crash(status:ExecResult) -> bool {
+    match status {
+        ExecResult::CRASH => true,
+        _ => false,
+    }
 }
