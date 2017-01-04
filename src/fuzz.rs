@@ -27,13 +27,16 @@ fn fuzz_one(conf:&Conf, seed:&Seed, q:&Vec<Seed>) -> Vec<Seed> {
     for _ in 0..10 {
         let content = mutate::mutate(&content, q);
         let feedback = exec::run_target(&conf, &content);
+        {
+            let mut log = conf.log.write().unwrap();
+            log.exec_count += 1;
+            log.total_node += feedback.newnode;
+        }
         if feedback.newnode > 0 {
             let new_seed = Seed::new(conf, &content);
             new_seeds.push(new_seed);
+            break;
         }
-        let mut log = conf.log.write().unwrap();
-        log.exec_count += 1;
-        log.total_node += feedback.newnode;
     }
 
     new_seeds
