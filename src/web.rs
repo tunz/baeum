@@ -20,7 +20,7 @@ pub struct IdValue {
 enum Api {
     Hello { page: String },
     Info { log: Arc<RwLock<conf::Log>> },
-    File
+    File { path_base: String },
 }
 
 fn read_string<P: AsRef<Path>>(path: P) -> io::Result<String> {
@@ -55,12 +55,12 @@ impl Handler for Api {
                                   IdValue { id: "execspeed".to_string(), value: execspeed.to_string() }];
                 response.send(json::encode(&object).unwrap());
             },
-            Api::File => {
+            Api::File { ref path_base } => {
                 if let Some(file) = context.variables.get("file") {
                     let file_path = Path::new(file.as_ref());
 
                     if check_path(file_path).is_ok() {
-                        let path = Path::new("ui").join(file_path);
+                        let path = Path::new(path_base).join(Path::new("ui").join(file_path));
                         let res = response.send_file(path)
                             .or_else(|e| e.send_not_found("the file was not found"))
                             .or_else(|e| e.ignore_send_error());
@@ -89,7 +89,7 @@ pub fn server_start(port:u16, path_base:String, log:Arc<RwLock<conf::Log>>) {
             TreeRouter::new() => {
                 Get: Api::Hello { page: page.clone() },
                 "info/*info" => Get: Api::Info { log: log.clone() },
-                "res/*file" => Get: Api::File
+                "res/*file" => Get: Api::File { path_base: path_base.clone() },
             }
         },
 
