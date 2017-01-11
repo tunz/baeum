@@ -1,6 +1,6 @@
 use std::fs;
 use std::io::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::os::unix::io::{RawFd, IntoRawFd};
 use std::env;
@@ -23,9 +23,9 @@ pub struct Log {
 
 pub struct Conf {
     pub args: Vec<String>,
-    pub input_path: String,
-    pub output_dir: String,
-    pub path_base: String,
+    pub input_path: PathBuf,
+    pub output_dir: PathBuf,
+    pub path_base: PathBuf,
     pub stdin_fd: RawFd,
     pub timeout: u64,
     pub log: Arc<RwLock<Log>>,
@@ -79,9 +79,9 @@ impl Conf {
 
         Conf {
             args: args,
-            output_dir: String::from(output_dir),
-            input_path: input_path,
-            path_base: path_base,
+            output_dir: PathBuf::from(output_dir),
+            input_path: PathBuf::from(input_path),
+            path_base: PathBuf::from(path_base),
             stdin_fd: stdin_fd,
             timeout: t,
             log: log,
@@ -104,7 +104,7 @@ impl Conf {
                 return;
             }
         };
-        let path = format!("{}/crash/tc-{}", self.output_dir, crash_num);
+        let path = self.output_dir.join("crash").join(format!("tc-{}", crash_num));
         let mut f = fs::File::create(&path).unwrap();
         f.write_all(buf).unwrap();
     }

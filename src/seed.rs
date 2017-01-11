@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::fs;
 use std::io;
 use std::io::prelude::*;
@@ -6,7 +7,7 @@ use conf::Conf;
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct Seed {
-    filepath: String,
+    filepath: PathBuf,
 }
 
 impl Seed {
@@ -28,7 +29,7 @@ impl Seed {
             log.seed_count = log.seed_count + 1;
             log.seed_count
         };
-        let path = format!("{}/queue/tc-{}", conf.output_dir, seed_count);
+        let path = conf.output_dir.join("queue").join(format!("tc-{}", seed_count));
         Seed { filepath: path }
     }
 

@@ -33,7 +33,7 @@ pub enum ExecResult {
 }
 
 pub fn initialize(conf: &Conf) {
-    let outputpath = format!("{}/.ret", conf.output_dir);
+    let outputpath = conf.output_dir.join(".ret");
     {
         let mut f = fs::File::create(&outputpath).unwrap();
         let buf = [0 as u8; 24];
@@ -84,7 +84,7 @@ fn exec(conf: &Conf) -> ExecResult {
 
 fn get_feedback(conf: &Conf) -> Feedback {
     // Better idea to get feedback? (always opening mmap ..?)
-    let outputpath = format!("{}/.ret", conf.output_dir);
+    let outputpath = conf.output_dir.join(".ret");
     let mmap = Mmap::open_path(outputpath, Protection::Read).unwrap();
     let bytes: &[u8] = unsafe { mmap.as_slice() };
     let mut buf = Cursor::new(&bytes[..]);

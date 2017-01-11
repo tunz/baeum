@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::io::{self, Read};
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 use rustc_serialize::json;
@@ -20,7 +20,7 @@ pub struct IdValue {
 enum Api {
     Hello { page: String },
     Info { log: Arc<RwLock<conf::Log>> },
-    File { path_base: String },
+    File { path_base: PathBuf },
 }
 
 fn read_string<P: AsRef<Path>>(path: P) -> io::Result<String> {
@@ -102,8 +102,8 @@ impl Handler for Api {
     }
 }
 
-pub fn server_start(port: u16, path_base: String, log: Arc<RwLock<conf::Log>>) {
-    let page = read_string(format!("{}/ui/index.html", path_base)).unwrap();
+pub fn server_start(port: u16, path_base: PathBuf, log: Arc<RwLock<conf::Log>>) {
+    let page = read_string(path_base.join("ui").join("index.html")).unwrap();
     let server_result = Server {
             host: port.into(),
 
