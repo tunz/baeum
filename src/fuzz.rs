@@ -4,7 +4,7 @@ use utils::get_random;
 use mutate;
 use exec;
 
-pub fn dry_run(conf:&Conf, seeds:&Vec<Seed>) {
+pub fn dry_run(conf: &Conf, seeds: &Vec<Seed>) {
     let mut total_node = 0;
     for seed in seeds {
         let content = seed.load_buf();
@@ -20,7 +20,7 @@ pub fn dry_run(conf:&Conf, seeds:&Vec<Seed>) {
     log.total_node = total_node;
 }
 
-fn fuzz_one(conf:&Conf, seed:&Seed, q:&Vec<Seed>) -> Vec<Seed> {
+fn fuzz_one(conf: &Conf, seed: &Seed, q: &Vec<Seed>) -> Vec<Seed> {
     let mut new_seeds = vec![];
     let content = seed.load_buf();
 
@@ -42,7 +42,7 @@ fn fuzz_one(conf:&Conf, seed:&Seed, q:&Vec<Seed>) -> Vec<Seed> {
     new_seeds
 }
 
-pub fn fuzz(conf:Conf, seeds:Vec<Seed>) {
+pub fn fuzz(conf: Conf, seeds: Vec<Seed>) {
     let mut q = seeds;
 
     loop {

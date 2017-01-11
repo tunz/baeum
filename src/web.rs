@@ -41,20 +41,42 @@ impl Handler for Api {
         match *self {
             Api::Hello { ref page } => {
                 response.send(page.as_str());
-            },
+            }
             Api::Info { ref log } => {
-                let log = { let log = log.read().unwrap(); (*log).clone() };
+                let log = {
+                    let log = log.read().unwrap();
+                    (*log).clone()
+                };
                 let t = log.start_time.elapsed().unwrap().as_secs();
                 let execspeed = if t == 0 { 0 } else { log.exec_count / t };
-                response.headers_mut().set(ContentType(content_type!(Application / Json; Charset = Utf8)));
-                let object = vec![IdValue { id: "seed_count".to_string(), value: log.seed_count.to_string() },
-                                  IdValue { id: "crash_count".to_string(), value: log.crash_count.to_string() },
-                                  IdValue { id: "uniq_crash_count".to_string(), value: log.uniq_crash_count.to_string() },
-                                  IdValue { id: "total_node".to_string(), value: log.total_node.to_string() },
-                                  IdValue { id: "time".to_string(), value: sec_to_timef(t) },
-                                  IdValue { id: "execspeed".to_string(), value: execspeed.to_string() }];
+                response.headers_mut()
+                    .set(ContentType(content_type!(Application / Json; Charset = Utf8)));
+                let object = vec![IdValue {
+                                      id: "seed_count".to_string(),
+                                      value: log.seed_count.to_string(),
+                                  },
+                                  IdValue {
+                                      id: "crash_count".to_string(),
+                                      value: log.crash_count.to_string(),
+                                  },
+                                  IdValue {
+                                      id: "uniq_crash_count".to_string(),
+                                      value: log.uniq_crash_count.to_string(),
+                                  },
+                                  IdValue {
+                                      id: "total_node".to_string(),
+                                      value: log.total_node.to_string(),
+                                  },
+                                  IdValue {
+                                      id: "time".to_string(),
+                                      value: sec_to_timef(t),
+                                  },
+                                  IdValue {
+                                      id: "execspeed".to_string(),
+                                      value: execspeed.to_string(),
+                                  }];
                 response.send(json::encode(&object).unwrap());
-            },
+            }
             Api::File { ref path_base } => {
                 if let Some(file) = context.variables.get("file") {
                     let file_path = Path::new(file.as_ref());
@@ -75,17 +97,17 @@ impl Handler for Api {
                 } else {
                     response.set_status(StatusCode::Forbidden);
                 }
-            },
+            }
         }
     }
 }
 
-pub fn server_start(port:u16, path_base:String, log:Arc<RwLock<conf::Log>>) {
+pub fn server_start(port: u16, path_base: String, log: Arc<RwLock<conf::Log>>) {
     let page = read_string(format!("{}/ui/index.html", path_base)).unwrap();
     let server_result = Server {
-        host: port.into(),
+            host: port.into(),
 
-        handlers: insert_routes!{
+            handlers: insert_routes!{
             TreeRouter::new() => {
                 Get: Api::Hello { page: page.clone() },
                 "info/*info" => Get: Api::Info { log: log.clone() },
@@ -93,13 +115,14 @@ pub fn server_start(port:u16, path_base:String, log:Arc<RwLock<conf::Log>>) {
             }
         },
 
-        ..Server::default()
-    }.run();
+            ..Server::default()
+        }
+        .run();
 
     println!("Web Server: http://0.0.0.0:{}", port);
 
     match server_result {
-        Ok(_server) => {},
+        Ok(_server) => {}
         Err(e) => error!("could not start server: {}", e.description()),
     }
 }

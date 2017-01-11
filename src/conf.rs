@@ -28,7 +28,7 @@ pub struct Conf {
     pub path_base: String,
     pub stdin_fd: RawFd,
     pub timeout: u64,
-    pub log: Arc<RwLock<Log>>
+    pub log: Arc<RwLock<Log>>,
 }
 
 impl Log {
@@ -46,7 +46,7 @@ impl Log {
 }
 
 impl Conf {
-    pub fn new(args:Vec<&str>, output_dir:&str, t:u64, input_path: &str) -> Conf {
+    pub fn new(args: Vec<&str>, output_dir: &str, t: u64, input_path: &str) -> Conf {
         if Path::new(&output_dir).exists() {
             println!("Error: {} already exists", output_dir);
             process::exit(1)
@@ -61,8 +61,13 @@ impl Conf {
             Some(_) => String::from(input_path),
             None => format!("{}/.stdin", output_dir),
         };
-        let mut args = args.iter().map(|&s| if s == "@@" { input_path.clone() }
-                                            else { String::from(s) }).collect::<Vec<String>>();
+        let mut args = args.iter()
+            .map(|&s| if s == "@@" {
+                input_path.clone()
+            } else {
+                String::from(s)
+            })
+            .collect::<Vec<String>>();
         let path_base = match Path::new(&env::args().nth(0).unwrap()).parent() {
             Some(p) => String::from(p.to_str().unwrap()),
             None => "".into(),
@@ -83,12 +88,12 @@ impl Conf {
         }
     }
 
-    pub fn new_without_filename(args:Vec<&str>, output_dir:&str, t:u64) -> Conf {
+    pub fn new_without_filename(args: Vec<&str>, output_dir: &str, t: u64) -> Conf {
         let filepath = format!("{}/.input", output_dir);
         Conf::new(args, output_dir, t, &filepath)
     }
 
-    pub fn save_crash(&self, buf:&Vec<u8>, feedback:&exec::Feedback) {
+    pub fn save_crash(&self, buf: &Vec<u8>, feedback: &exec::Feedback) {
         let crash_num = {
             let mut log = self.log.write().unwrap();
             log.crash_count += 1;
@@ -104,4 +109,3 @@ impl Conf {
         f.write_all(buf).unwrap();
     }
 }
-

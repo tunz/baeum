@@ -13,8 +13,8 @@ use memmap::{Mmap, Protection};
 
 use conf::Conf;
 
-extern {
-    fn initialize_libexec (argc: c_int, args: *const *const c_char, fd: c_int, timeout: u64);
+extern "C" {
+    fn initialize_libexec(argc: c_int, args: *const *const c_char, fd: c_int, timeout: u64);
     fn kill_forkserver();
     fn exec_fork(timeout: u64) -> c_int;
 }
@@ -29,10 +29,10 @@ pub struct Feedback {
 pub enum ExecResult {
     CRASH,
     HANG,
-    SUCCESS
+    SUCCESS,
 }
 
-pub fn initialize(conf:&Conf) {
+pub fn initialize(conf: &Conf) {
     let outputpath = format!("{}/.ret", conf.output_dir);
     {
         let mut f = fs::File::create(&outputpath).unwrap();
@@ -41,12 +41,16 @@ pub fn initialize(conf:&Conf) {
     }
     env::set_var("BAEUM_RET_PATH", outputpath);
 
-    let args = conf.args.iter()
-                   .map(|ref s| CString::new(s.as_str()).unwrap()).collect::<Vec<CString>>();
+    let args = conf.args
+        .iter()
+        .map(|ref s| CString::new(s.as_str()).unwrap())
+        .collect::<Vec<CString>>();
     let argv = args.iter().map(|ref s| s.as_ptr()).collect::<Vec<*const c_char>>();
     unsafe {
-        initialize_libexec(args.len() as c_int, argv.as_ptr() as *const *const c_char,
-                           conf.stdin_fd as c_int, conf.timeout);
+        initialize_libexec(args.len() as c_int,
+                           argv.as_ptr() as *const *const c_char,
+                           conf.stdin_fd as c_int,
+                           conf.timeout);
     }
 }
 
@@ -55,7 +59,7 @@ pub fn finalize() {
 }
 
 #[inline(always)]
-fn setup_env(conf:&Conf, buf:&Vec<u8>) {
+fn setup_env(conf: &Conf, buf: &Vec<u8>) {
     let _ = fs::remove_file(&conf.input_path);
 
     let mut f = fs::File::create(&conf.input_path).unwrap();
@@ -63,13 +67,13 @@ fn setup_env(conf:&Conf, buf:&Vec<u8>) {
 }
 
 #[inline(always)]
-fn clear_env(conf:&Conf) {
+fn clear_env(conf: &Conf) {
     let _ = fs::remove_file(&conf.input_path);
 }
 
 // XXX : I want to use enum..
 // Status = Timeout = -1 | Normal = 0 | SIGSEGV = 11 | SIGILL = 4 | SIGFPE = 8 | SIGABRT = 6
-fn exec(conf:&Conf) -> ExecResult {
+fn exec(conf: &Conf) -> ExecResult {
     let status = unsafe { exec_fork(conf.timeout) };
     match status {
         -1 => ExecResult::HANG,
@@ -78,7 +82,7 @@ fn exec(conf:&Conf) -> ExecResult {
     }
 }
 
-fn get_feedback(conf:&Conf) -> Feedback {
+fn get_feedback(conf: &Conf) -> Feedback {
     // Better idea to get feedback? (always opening mmap ..?)
     let outputpath = format!("{}/.ret", conf.output_dir);
     let mmap = Mmap::open_path(outputpath, Protection::Read).unwrap();
@@ -88,10 +92,15 @@ fn get_feedback(conf:&Conf) -> Feedback {
     let subpath = buf.read_u64::<LittleEndian>().unwrap();
     let nodecount = buf.read_u32::<LittleEndian>().unwrap();
     let newnode = buf.read_u32::<LittleEndian>().unwrap();
-    Feedback { exec_id: exec_id, subpath: subpath, node: nodecount, newnode: newnode }
+    Feedback {
+        exec_id: exec_id,
+        subpath: subpath,
+        node: nodecount,
+        newnode: newnode,
+    }
 }
 
-pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> (ExecResult, Feedback) {
+pub fn run_target(conf: &Conf, buf: &Vec<u8>) -> (ExecResult, Feedback) {
     setup_env(&conf, &buf);
 
     let status = exec(&conf);
@@ -106,7 +115,7 @@ pub fn run_target(conf:&Conf, buf:&Vec<u8>) -> (ExecResult, Feedback) {
     (status, feedback)
 }
 
-pub fn is_crash(status:ExecResult) -> bool {
+pub fn is_crash(status: ExecResult) -> bool {
     match status {
         ExecResult::CRASH => true,
         _ => false,

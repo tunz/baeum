@@ -1,10 +1,12 @@
 extern crate clap;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 extern crate rand;
 extern crate memmap;
 extern crate byteorder;
-#[macro_use] extern crate rustful;
+#[macro_use]
+extern crate rustful;
 extern crate rustc_serialize;
 
 use std::thread;
@@ -18,7 +20,7 @@ mod exec;
 mod web;
 mod utils;
 
-fn arg_parse<'a> () -> ArgMatches<'a> {
+fn arg_parse<'a>() -> ArgMatches<'a> {
     App::new("baeum")
         .setting(AppSettings::TrailingVarArg)
         .setting(AppSettings::AllowLeadingHyphen)
@@ -26,23 +28,23 @@ fn arg_parse<'a> () -> ArgMatches<'a> {
         .author("Choongwoo Han <cwhan.tunz@gmail.com>")
         .about("A Reinforcement-Learning-Based Fuzzing")
         .arg(Arg::with_name("input")
-             .short("i")
-             .help("Directory of input seed files")
-             .required(true)
-             .takes_value(true))
+            .short("i")
+            .help("Directory of input seed files")
+            .required(true)
+            .takes_value(true))
         .arg(Arg::with_name("output")
-             .short("o")
-             .help("Directory of output files")
-             .required(true)
-             .takes_value(true))
+            .short("o")
+            .help("Directory of output files")
+            .required(true)
+            .takes_value(true))
         .arg(Arg::with_name("timeout")
-             .short("t")
-             .help("Timeout for each execution in milliseconds (default: 1000)")
-             .takes_value(true))
+            .short("t")
+            .help("Timeout for each execution in milliseconds (default: 1000)")
+            .takes_value(true))
         .arg(Arg::with_name("port")
-             .short("p")
-             .help("Port number for web interface (default: 8000)")
-             .takes_value(true))
+            .short("p")
+            .help("Port number for web interface (default: 8000)")
+            .takes_value(true))
         .arg(Arg::from_usage("<args>... 'commands to run'"))
         .get_matches()
 }
@@ -54,10 +56,14 @@ fn main() {
     let seeds_dir = matches.value_of("input").unwrap();
     let output_dir = matches.value_of("output").unwrap();
     let args = matches.values_of("args").unwrap().collect::<Vec<&str>>();
-    let t = matches.value_of("timeout").unwrap_or("1000").parse::<u64>()
-                .expect("Fail to parse timeout option");
-    let port = matches.value_of("port").unwrap_or("8000").parse::<u16>()
-                   .expect("Fail to parse timeout option");
+    let t = matches.value_of("timeout")
+        .unwrap_or("1000")
+        .parse::<u64>()
+        .expect("Fail to parse timeout option");
+    let port = matches.value_of("port")
+        .unwrap_or("8000")
+        .parse::<u16>()
+        .expect("Fail to parse timeout option");
 
     debug!("Seed Dir: {}", seeds_dir);
     debug!("Output Dir: {}", output_dir);
@@ -69,7 +75,7 @@ fn main() {
         Err(e) => {
             println!("Error: {}", e);
             return;
-        },
+        }
     };
 
     exec::initialize(&conf);
