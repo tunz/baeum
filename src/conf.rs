@@ -104,7 +104,7 @@ impl Conf {
                 return;
             }
         };
-        let path = self.output_dir.join("crash").join(format!("tc-{}", crash_num));
+        let path = self.output_dir.join(format!("crash/tc-{}", crash_num));
         let mut f = fs::File::create(&path).unwrap();
         f.write_all(buf).unwrap();
     }

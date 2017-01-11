@@ -29,7 +29,7 @@ impl Seed {
             log.seed_count = log.seed_count + 1;
             log.seed_count
         };
-        let path = conf.output_dir.join("queue").join(format!("tc-{}", seed_count));
+        let path = conf.output_dir.join(format!("queue/tc-{}", seed_count));
         Seed { filepath: path }
     }
 

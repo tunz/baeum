@@ -103,7 +103,7 @@ impl Handler for Api {
 }
 
 pub fn server_start(port: u16, path_base: PathBuf, log: Arc<RwLock<conf::Log>>) {
-    let page = read_string(path_base.join("ui").join("index.html")).unwrap();
+    let page = read_string(path_base.join("ui/index.html")).unwrap();
     let server_result = Server {
             host: port.into(),
 
