@@ -38,7 +38,6 @@ static int stdin_fd;
 
 static void alarm_callback(int sig) {
     if (child_pid) {
-        fflush(stdout);
         kill(child_pid, SIGKILL);
         timedout = -1;
     }
@@ -111,24 +110,19 @@ pid_t init_forkserver_impl(int argc, char** args, uint64_t timeout, int forksrv_
         dup2(stdin_fd, 0);
         close(stdin_fd);
 
-      if (dup2(ctl_pipe[0], forksrv_fd) < 0) error_exit("dup2() failed");
-      if (dup2(st_pipe[1], forksrv_fd + 1) < 0) error_exit("dup2() failed");
+        if (dup2(ctl_pipe[0], forksrv_fd) < 0) error_exit("dup2() failed");
+        if (dup2(st_pipe[1], forksrv_fd + 1) < 0) error_exit("dup2() failed");
 
-      close(ctl_pipe[0]);
-      close(ctl_pipe[1]);
-      close(st_pipe[0]);
-      close(st_pipe[1]);
+        close(ctl_pipe[0]);
+        close(ctl_pipe[1]);
+        close(st_pipe[0]);
+        close(st_pipe[1]);
 
-      setenv("LD_BIND_NOW", "1", 0);
+        setenv("LD_BIND_NOW", "1", 0);
 
-      setenv("ASAN_OPTIONS", "abort_on_error=1:"
-                             "detect_leaks=0:"
-                             "symbolize=0:"
-                             "allocator_may_return_null=1", 0);
+        execv(argv[0], argv);
 
-      execv(argv[0], argv);
-
-      exit(0);
+        exit(0);
     }
     free(argv);
 
