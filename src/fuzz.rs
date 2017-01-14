@@ -51,5 +51,6 @@ pub fn fuzz(conf: Conf, seeds: Vec<Seed>) {
             fuzz_one(&conf, seed, &q)
         };
         q.extend(new_seeds);
+        conf.update_log();
     }
 }

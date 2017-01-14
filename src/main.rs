@@ -12,6 +12,7 @@ extern crate rustc_serialize;
 use std::thread;
 
 use clap::{Arg, App, ArgMatches, AppSettings};
+mod stat;
 mod seed;
 mod mutate;
 mod fuzz;

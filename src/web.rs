@@ -9,7 +9,9 @@ use rustful::{Server, Context, Response, Handler, TreeRouter, StatusCode};
 use rustful::header::ContentType;
 use rustful::file::check_path;
 
-use conf;
+use stat;
+
+// XXX: Use Rocket instaed of Rustful when Rust stable can run Rocket
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct IdValue {
@@ -19,7 +21,8 @@ pub struct IdValue {
 
 enum Api {
     Hello { page: String },
-    Info { log: Arc<RwLock<conf::Log>> },
+    Info { log: Arc<RwLock<stat::Log>> },
+    Plot { log: Arc<RwLock<stat::Log>> },
     File { path_base: PathBuf },
 }
 
@@ -43,11 +46,11 @@ impl Handler for Api {
                 response.send(page.as_str());
             }
             Api::Info { ref log } => {
-                let info = {
+                let (info, start_time) = {
                     let log = log.read().unwrap();
-                    (*log).info.clone()
+                    ((*log).info.clone(), (*log).data.start_time)
                 };
-                let t = info.start_time.elapsed().unwrap().as_secs();
+                let t = start_time.elapsed().unwrap().as_secs();
                 let execspeed = if t == 0 { 0 } else { info.exec_count / t };
                 response.headers_mut()
                     .set(ContentType(content_type!(Application / Json; Charset = Utf8)));
@@ -77,6 +80,21 @@ impl Handler for Api {
                                   }];
                 response.send(json::encode(&object).unwrap());
             }
+            Api::Plot { ref log } => {
+                let idx = match context.variables.get("idx") {
+                    Some(i) => i.parse::<usize>().ok(),
+                    None => Some(0),
+                };
+                let mut ret_infos: Vec<stat::LogInfo> = vec![];
+                if let Some(idx) = idx {
+                    let log = log.read().unwrap();
+                    let ref infos = log.data.infos;
+                    if (idx as usize) < infos.len() {
+                        ret_infos.extend_from_slice(&infos[idx..]);
+                    }
+                };
+                response.send(json::encode(&ret_infos).unwrap());
+            }
             Api::File { ref path_base } => {
                 if let Some(file) = context.variables.get("file") {
                     let file_path = Path::new(file.as_ref());
@@ -102,18 +120,19 @@ impl Handler for Api {
     }
 }
 
-pub fn server_start(port: u16, path_base: PathBuf, log: Arc<RwLock<conf::Log>>) {
+pub fn server_start(port: u16, path_base: PathBuf, log: Arc<RwLock<stat::Log>>) {
     let page = read_string(path_base.join("ui/index.html")).unwrap();
     let server_result = Server {
             host: port.into(),
 
             handlers: insert_routes!{
-            TreeRouter::new() => {
-                Get: Api::Hello { page: page.clone() },
-                "info/*info" => Get: Api::Info { log: log.clone() },
-                "res/*file" => Get: Api::File { path_base: path_base.clone() },
-            }
-        },
+                TreeRouter::new() => {
+                    Get: Api::Hello { page: page.clone() },
+                    "info/*info" => Get: Api::Info { log: log.clone() },
+                    "plot/*idx" => Get: Api::Plot { log: log.clone() },
+                    "res/*file" => Get: Api::File { path_base: path_base.clone() },
+                }
+            },
 
             ..Server::default()
         }

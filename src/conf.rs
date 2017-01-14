@@ -5,29 +5,9 @@ use std::process;
 use std::os::unix::io::{RawFd, IntoRawFd};
 use std::env;
 use std::sync::{Arc, RwLock};
-use std::time::SystemTime;
-use std::collections::HashSet;
 
 use exec;
-
-#[derive(Clone)]
-pub struct LogInfo {
-    pub seed_count: u32,
-    pub crash_count: u32,
-    pub uniq_crash_count: u32,
-    pub start_time: SystemTime,
-    pub exec_count: u64,
-    pub total_node: u32,
-}
-
-pub struct LogData {
-    pub crash_paths: HashSet<u64>,
-}
-
-pub struct Log {
-    pub info: LogInfo,
-    pub data: LogData,
-}
+use stat;
 
 pub struct Conf {
     pub args: Vec<String>,
@@ -36,29 +16,7 @@ pub struct Conf {
     pub path_base: PathBuf,
     pub stdin_fd: RawFd,
     pub timeout: u64,
-    pub log: Arc<RwLock<Log>>,
-}
-
-impl LogInfo {
-    pub fn new() -> Self {
-        LogInfo {
-            seed_count: 0,
-            crash_count: 0,
-            uniq_crash_count: 0,
-            start_time: SystemTime::now(),
-            exec_count: 0,
-            total_node: 0,
-        }
-    }
-}
-
-impl Log {
-    pub fn new() -> Self {
-        Log {
-            info: LogInfo::new(),
-            data: LogData { crash_paths: HashSet::new() },
-        }
-    }
+    pub log: Arc<RwLock<stat::Log>>,
 }
 
 impl Conf {
@@ -91,7 +49,7 @@ impl Conf {
         let qemu_path = format!("{}/qemu-trace-coverage", path_base);
         args.insert(0, qemu_path);
 
-        let log = Arc::new(RwLock::new(Log::new()));
+        let log = Arc::new(RwLock::new(stat::Log::new()));
 
         Conf {
             args: args,
@@ -123,5 +81,10 @@ impl Conf {
         let path = self.output_dir.join(format!("crash/tc-{}", crash_num));
         let mut f = fs::File::create(&path).unwrap();
         f.write_all(buf).unwrap();
+    }
+
+    pub fn update_log(&self) {
+        let mut log = self.log.write().unwrap();
+        log.update();
     }
 }
