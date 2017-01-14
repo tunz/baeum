@@ -8,6 +8,10 @@ baeum:
 	@cargo build --release
 	@cp ./target/release/baeum ./
 
+debug:
+	@cargo build
+	@cp ./target/debug/baeum ./
+
 $(QEMUDIR)/.compiled:
 	cd $(QEMUDIR) && make
 	@touch $@

@@ -2,10 +2,11 @@
 use std::time::SystemTime;
 use std::collections::HashSet;
 
-const LOG_INTERVAL: u64 = 60; 
+const LOG_INTERVAL: u64 = 60;
 
 #[derive(Clone, RustcDecodable, RustcEncodable)]
 pub struct LogInfo {
+    pub t: u64,
     pub seed_count: u32,
     pub crash_count: u32,
     pub uniq_crash_count: u32,
@@ -28,6 +29,7 @@ pub struct Log {
 impl LogInfo {
     pub fn new() -> Self {
         LogInfo {
+            t: 0,
             seed_count: 0,
             crash_count: 0,
             uniq_crash_count: 0,
@@ -66,6 +68,7 @@ impl Log {
             return;
         }
         self.data.reset_last_time();
+        self.info.t = self.data.start_time.elapsed().unwrap().as_secs();
         self.data.infos.push(self.info.clone());
     }
 }
