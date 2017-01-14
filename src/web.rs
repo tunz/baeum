@@ -43,29 +43,29 @@ impl Handler for Api {
                 response.send(page.as_str());
             }
             Api::Info { ref log } => {
-                let log = {
+                let info = {
                     let log = log.read().unwrap();
-                    (*log).clone()
+                    (*log).info.clone()
                 };
-                let t = log.start_time.elapsed().unwrap().as_secs();
-                let execspeed = if t == 0 { 0 } else { log.exec_count / t };
+                let t = info.start_time.elapsed().unwrap().as_secs();
+                let execspeed = if t == 0 { 0 } else { info.exec_count / t };
                 response.headers_mut()
                     .set(ContentType(content_type!(Application / Json; Charset = Utf8)));
                 let object = vec![IdValue {
                                       id: "seed_count".to_string(),
-                                      value: log.seed_count.to_string(),
+                                      value: info.seed_count.to_string(),
                                   },
                                   IdValue {
                                       id: "crash_count".to_string(),
-                                      value: log.crash_count.to_string(),
+                                      value: info.crash_count.to_string(),
                                   },
                                   IdValue {
                                       id: "uniq_crash_count".to_string(),
-                                      value: log.uniq_crash_count.to_string(),
+                                      value: info.uniq_crash_count.to_string(),
                                   },
                                   IdValue {
                                       id: "total_node".to_string(),
-                                      value: log.total_node.to_string(),
+                                      value: info.total_node.to_string(),
                                   },
                                   IdValue {
                                       id: "time".to_string(),

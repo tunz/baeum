@@ -26,8 +26,8 @@ impl Seed {
     fn create_seed(conf: &Conf) -> Seed {
         let seed_count = {
             let mut log = conf.log.write().unwrap();
-            log.seed_count = log.seed_count + 1;
-            log.seed_count
+            log.info.seed_count = log.info.seed_count + 1;
+            log.info.seed_count
         };
         let path = conf.output_dir.join(format!("queue/tc-{}", seed_count));
         Seed { filepath: path }

@@ -16,8 +16,8 @@ pub fn dry_run(conf: &Conf, seeds: &Vec<Seed>) {
         }
     }
     let mut log = conf.log.write().unwrap();
-    log.exec_count = seeds.len() as u64;
-    log.total_node = total_node;
+    log.info.exec_count = seeds.len() as u64;
+    log.info.total_node = total_node;
 }
 
 fn fuzz_one(conf: &Conf, seed: &Seed, q: &Vec<Seed>) -> Vec<Seed> {
@@ -29,8 +29,8 @@ fn fuzz_one(conf: &Conf, seed: &Seed, q: &Vec<Seed>) -> Vec<Seed> {
         let (status, feedback) = exec::run_target(&conf, &content);
         {
             let mut log = conf.log.write().unwrap();
-            log.exec_count += 1;
-            log.total_node += feedback.newnode;
+            log.info.exec_count += 1;
+            log.info.total_node += feedback.newnode;
         }
         if !exec::is_crash(status) && feedback.newnode > 0 {
             let new_seed = Seed::new(conf, &content);

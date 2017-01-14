@@ -11,14 +11,22 @@ use std::collections::HashSet;
 use exec;
 
 #[derive(Clone)]
-pub struct Log {
+pub struct LogInfo {
     pub seed_count: u32,
     pub crash_count: u32,
     pub uniq_crash_count: u32,
-    pub crash_paths: HashSet<u64>,
     pub start_time: SystemTime,
     pub exec_count: u64,
     pub total_node: u32,
+}
+
+pub struct LogData {
+    pub crash_paths: HashSet<u64>,
+}
+
+pub struct Log {
+    pub info: LogInfo,
+    pub data: LogData,
 }
 
 pub struct Conf {
@@ -31,16 +39,24 @@ pub struct Conf {
     pub log: Arc<RwLock<Log>>,
 }
 
-impl Log {
+impl LogInfo {
     pub fn new() -> Self {
-        Log {
+        LogInfo {
             seed_count: 0,
             crash_count: 0,
             uniq_crash_count: 0,
-            crash_paths: HashSet::new(),
             start_time: SystemTime::now(),
             exec_count: 0,
             total_node: 0,
+        }
+    }
+}
+
+impl Log {
+    pub fn new() -> Self {
+        Log {
+            info: LogInfo::new(),
+            data: LogData { crash_paths: HashSet::new() },
         }
     }
 }
@@ -96,10 +112,10 @@ impl Conf {
     pub fn save_crash(&self, buf: &Vec<u8>, feedback: &exec::Feedback) {
         let crash_num = {
             let mut log = self.log.write().unwrap();
-            log.crash_count += 1;
-            if log.crash_paths.insert(feedback.subpath) {
-                log.uniq_crash_count += 1;
-                log.uniq_crash_count
+            log.info.crash_count += 1;
+            if log.data.crash_paths.insert(feedback.subpath) {
+                log.info.uniq_crash_count += 1;
+                log.info.uniq_crash_count
             } else {
                 return;
             }
