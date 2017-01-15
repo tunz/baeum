@@ -28,10 +28,10 @@ build_qemu () {
 
     echo "[*] Configuring QEMU for $CPU_TARGET..."
 
-    cd qemu-2.3.0 || exit 1
+    cd qemu-2.8.0 || exit 1
 
     CFLAGS="-O3" ./configure --disable-system --enable-linux-user \
-      --enable-guest-base --disable-gtk --disable-sdl --disable-vnc \
+      --disable-gtk --disable-sdl --disable-vnc \
       --target-list="${CPU_TARGET}-linux-user" || exit 1
 
     echo "[+] Configuration complete."
@@ -47,8 +47,8 @@ build_qemu () {
     cd ..
 }
 
-QEMU_URL="http://wiki.qemu-project.org/download/qemu-2.3.0.tar.bz2"
-QEMU_SHA384="7a0f0c900f7e2048463cc32ff3e904965ab466c8428847400a0f2dcfe458108a68012c4fddb2a7e7c822b4fd1a49639b"
+QEMU_URL="http://wiki.qemu-project.org/download/qemu-2.8.0.tar.bz2"
+QEMU_SHA256="dafd5d7f649907b6b617b822692f4c82e60cf29bc0fc58bc2036219b591e5e62"
 
 echo "========================================="
 echo "Chatkey instrumentation QEMU build script"
@@ -71,43 +71,35 @@ if [ ! -f "patches/baeum.cc" ]; then
 
 fi
 
-for i in libtool wget python automake autoconf sha384sum bison iconv; do
-
-  T=`which "$i" 2>/dev/null`
-
-  if [ "$T" = "" ]; then
-
-    echo "[-] Error: '$i' not found, please install first."
+T=`which apt-get 2>/dev/null`
+if [ "$T" = "" ]; then
+    echo "[-] Error: Sorry, this script needs apt-get."
     exit 1
-
-  fi
-
-done
-
-if [ ! -d "/usr/include/glib-2.0/" -a ! -d "/usr/local/include/glib-2.0/" ]; then
-
-  echo "[-] Error: devel version of 'glib2' not found, please install first."
-  exit 1
-
 fi
+
+echo "[*] Download dependencies."
+echo "sudo apt-get --no-install-recommends -qq -y build-dep qemu"
+sudo apt-get --no-install-recommends -qq -y build-dep qemu
+echo "sudo apt-get install -qq -y wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev"
+sudo apt-get install -qq -y wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
 
 echo "[+] All checks passed!"
 
 ARCHIVE="`basename -- "$QEMU_URL"`"
 
-CKSUM=`sha384sum -- "$ARCHIVE" 2>/dev/null | cut -d' ' -f1`
+CKSUM=`sha256sum -- "$ARCHIVE" 2>/dev/null | cut -d' ' -f1`
 
-if [ ! "$CKSUM" = "$QEMU_SHA384" ]; then
+if [ ! "$CKSUM" = "$QEMU_SHA256" ]; then
 
-  echo "[*] Downloading QEMU 2.3.0 from the web..."
+  echo "[*] Downloading QEMU 2.8.0 from the web..."
   rm -f "$ARCHIVE"
   wget -O "$ARCHIVE" -- "$QEMU_URL" || exit 1
 
-  CKSUM=`sha384sum -- "$ARCHIVE" 2>/dev/null | cut -d' ' -f1`
+  CKSUM=`sha256sum -- "$ARCHIVE" 2>/dev/null | cut -d' ' -f1`
 
 fi
 
-if [ "$CKSUM" = "$QEMU_SHA384" ]; then
+if [ "$CKSUM" = "$QEMU_SHA256" ]; then
 
   echo "[+] Cryptographic signature on $ARCHIVE checks out."
 
@@ -120,23 +112,16 @@ fi
 
 echo "[*] Uncompressing archive (this will take a while)..."
 
-rm -rf "qemu-2.3.0-orig" || exit 1
-rm -rf "qemu-2.3.0" || exit 1
+rm -rf "qemu-2.8.0" || exit 1
 tar xf "$ARCHIVE" || exit 1
 
-cp -r "qemu-2.3.0" "qemu-2.3.0-orig"
 echo "[+] Unpacking successful."
 
 echo "[*] Build qemu-trace-coverage..."
 echo "[*] Applying patches..."
 
-patch -p0 <patches/elfload.diff || exit 1
-patch -p0 <patches/translate-all.diff || exit 1
-patch -p0 <patches/cpu-exec.diff || exit 1
-patch -p0 <patches/syscall.diff || exit 1
-patch -p0 <patches/signal.diff || exit 1
-patch -p0 <patches/makefile-target.diff || exit 1
-cp patches/baeum.cc qemu-2.3.0/
+patch -p0 <patches/qemu.patch || exit 1
+cp patches/baeum.cc qemu-2.8.0/
 
 echo "[+] Patching done."
 
@@ -146,7 +131,7 @@ cp -f "./qemu-trace" "../qemu-trace-coverage" || exit 1
 rm -rf "./qemu-trace"
 echo "[+] Successfully created '../qemu-trace-coverage'."
 
-rm -rf "qemu-2.3.0"
-rm -rf "qemu-2.3.0-orig"
+rm -rf "qemu-2.8.0"
+rm -rf "qemu-2.8.0.tar.bz2"
 
 exit 0

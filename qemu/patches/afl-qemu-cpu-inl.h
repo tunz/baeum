@@ -49,8 +49,10 @@ static void afl_forkserver(CPUArchState*);
 static void afl_wait_tsl(CPUArchState*, int);
 void afl_request_tsl(target_ulong, target_ulong, uint64_t, int);
 
-static TranslationBlock *tb_find_slow(CPUArchState*, target_ulong,
-                                      target_ulong, uint64_t);
+static TranslationBlock *tb_htable_lookup(CPUState *,
+                                          target_ulong,
+                                          target_ulong,
+                                          uint32_t);
 
 /* Data structure passed around by the translate handlers: */
 
@@ -159,6 +161,8 @@ void afl_request_tsl(target_ulong pc, target_ulong cb, uint64_t flags, int globa
 
 static void afl_wait_tsl(CPUArchState *env, int fd) {
 
+  CPUState *cpu = ENV_GET_CPU(env);
+  TranslationBlock *tb;
   struct afl_tsl t;
 
   while (1) {
@@ -169,9 +173,26 @@ static void afl_wait_tsl(CPUArchState *env, int fd) {
       break;
 
     if (t.global)
-        global_node_update(t.pc);
-    else if (t.pc < mmap_next_start)
-        tb_find_slow(env, t.pc, t.cs_base, t.flags);
+      global_node_update(t.pc);
+    else if (t.pc < mmap_next_start) {
+      mmap_lock();
+      tb_lock();
+
+      /* There's a chance that our desired tb has been translated while
+       * taking the locks so we check again inside the lock.
+       */
+      tb = tb_htable_lookup(cpu, t.pc, t.cs_base, t.flags);
+      if (!tb) {
+          /* if no translated code available, then translate it now */
+          tb = tb_gen_code(cpu, t.pc, t.cs_base, t.flags, 0);
+      }
+
+      mmap_unlock();
+
+      /* We add the TB in the virtual pc hash table for the fast lookup */
+      atomic_set(&cpu->tb_jmp_cache[tb_jmp_cache_hash_func(t.pc)], tb);
+      tb_unlock();
+    }
 
   }
 

@@ -57,6 +57,6 @@ $(SHBUILDDIR)/.compiled: build
 dep: .dep .dep/shdown .dep/shunpack .dep/shrename $(SHBUILDDIR)/.compiled
 
 qemu-trace-coverage: patches/baeum.cc $(PATCHES)
-	./build_qemu_support.sh
+	./build_qemu.sh
 
 .PHONY: all clean

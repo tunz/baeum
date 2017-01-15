@@ -1,0 +1,162 @@
+diff -Naur qemu-2.8.0-orig/cpu-exec.c qemu-2.8.0/cpu-exec.c
+--- qemu-2.8.0-orig/cpu-exec.c	2017-01-16 00:30:12.354465393 +0900
++++ qemu-2.8.0/cpu-exec.c	2017-01-16 00:50:44.800576764 +0900
+@@ -34,6 +34,12 @@
+ #endif
+ #include "sysemu/replay.h"
+ 
++extern abi_ulong baeum_entry_point; /* ELF entry point (_start) */
++extern void baeum_setup(void);
++extern void baeum_log_bb(abi_ulong addr);
++
++#include "../patches/afl-qemu-cpu-inl.h"
++
+ /* -icount align implementation. */
+ 
+ typedef struct SyncClocks {
+@@ -344,6 +350,8 @@
+             if (!tb) {
+                 /* if no translated code available, then translate it now */
+                 tb = tb_gen_code(cpu, pc, cs_base, flags, 0);
++
++                afl_request_tsl(pc, cs_base, flags, 0);
+             }
+ 
+             mmap_unlock();
+@@ -635,6 +643,13 @@
+             for(;;) {
+                 cpu_handle_interrupt(cpu, &last_tb);
+                 tb = tb_find(cpu, last_tb, tb_exit);
++
++                if(tb->pc == baeum_entry_point) {
++                    afl_forkserver(cpu->env_ptr);
++                    baeum_setup();
++                }
++                baeum_log_bb(tb->pc);
++
+                 cpu_loop_exec_tb(cpu, tb, &last_tb, &tb_exit, &sc);
+                 /* Try to align the host and virtual clocks
+                    if the guest is in advance */
+diff -Naur qemu-2.8.0-orig/linux-user/elfload.c qemu-2.8.0/linux-user/elfload.c
+--- qemu-2.8.0-orig/linux-user/elfload.c	2017-01-16 00:30:12.422465731 +0900
++++ qemu-2.8.0/linux-user/elfload.c	2017-01-16 00:50:56.148633036 +0900
+@@ -20,6 +20,8 @@
+ 
+ #define ELF_OSABI   ELFOSABI_SYSV
+ 
++extern abi_ulong baeum_entry_point;
++
+ /* from personality.h */
+ 
+ /*
+@@ -1915,6 +1917,8 @@
+     info->brk = 0;
+     info->elf_flags = ehdr->e_flags;
+ 
++    if (!baeum_entry_point) baeum_entry_point = info->entry;
++
+     for (i = 0; i < ehdr->e_phnum; i++) {
+         struct elf_phdr *eppnt = phdr + i;
+         if (eppnt->p_type == PT_LOAD) {
+diff -Naur qemu-2.8.0-orig/linux-user/signal.c qemu-2.8.0/linux-user/signal.c
+--- qemu-2.8.0-orig/linux-user/signal.c	2017-01-16 00:30:12.422465731 +0900
++++ qemu-2.8.0/linux-user/signal.c	2017-01-16 01:07:21.217517728 +0900
+@@ -26,6 +26,8 @@
+ #include "target_signal.h"
+ #include "trace.h"
+ 
++extern void baeum_exit(int);
++
+ static struct target_sigaltstack target_sigaltstack_used = {
+     .ss_sp = 0,
+     .ss_size = 0,
+@@ -573,6 +575,7 @@
+         getrlimit(RLIMIT_CORE, &nodump);
+         nodump.rlim_cur=0;
+         setrlimit(RLIMIT_CORE, &nodump);
++        baeum_exit(1);
+         (void) fprintf(stderr, "qemu: uncaught target signal %d (%s) - %s\n",
+             target_sig, strsignal(host_sig), "core dumped" );
+     }
+diff -Naur qemu-2.8.0-orig/linux-user/syscall.c qemu-2.8.0/linux-user/syscall.c
+--- qemu-2.8.0-orig/linux-user/syscall.c	2017-01-16 00:30:12.422465731 +0900
++++ qemu-2.8.0/linux-user/syscall.c	2017-01-16 01:06:45.585341038 +0900
+@@ -114,6 +114,9 @@
+ 
+ #include "qemu.h"
+ 
++extern void baeum_exit(int);
++extern void baeum_close(void);
++
+ #ifndef CLONE_IO
+ #define CLONE_IO                0x80000000      /* Clone io context */
+ #endif
+@@ -915,7 +918,22 @@
+ safe_syscall2(int, rt_sigsuspend, sigset_t *, newset, size_t, sigsetsize)
+ safe_syscall2(int, kill, pid_t, pid, int, sig)
+ safe_syscall2(int, tkill, int, tid, int, sig)
+-safe_syscall3(int, tgkill, int, tgid, int, pid, int, sig)
++
++
++extern unsigned int afl_forksrv_pid;
++
++static int safe_tgkill(int tgid, int pid, int sig) {
++
++  /* Workaround for -lpthread to make abort() work properly, without
++     killing the forkserver due to a prematurely cached PID. */
++
++  if (afl_forksrv_pid && afl_forksrv_pid == pid &&
++      (sig == SIGABRT || sig == SIGSEGV || sig == SIGFPE || sig == SIGILL))
++    pid = tgid = getpid();
++
++  return safe_syscall(__NR_tgkill, pid, tgid, sig);
++}
++
+ safe_syscall3(ssize_t, readv, int, fd, const struct iovec *, iov, int, iovcnt)
+ safe_syscall3(ssize_t, writev, int, fd, const struct iovec *, iov, int, iovcnt)
+ safe_syscall5(ssize_t, preadv, int, fd, const struct iovec *, iov, int, iovcnt,
+@@ -6225,6 +6243,7 @@
+                 cpu_set_tls (env, newtls);
+             if (flags & CLONE_CHILD_CLEARTID)
+                 ts->child_tidptr = child_tidptr;
++            baeum_close();
+         } else {
+             fork_end(0);
+         }
+@@ -7602,6 +7621,7 @@
+ #ifdef TARGET_GPROF
+         _mcleanup();
+ #endif
++        baeum_exit(0);
+         gdb_exit(cpu_env, arg1);
+         _exit(arg1);
+         ret = 0; /* avoid warning */
+@@ -9641,6 +9661,7 @@
+ #ifdef TARGET_GPROF
+         _mcleanup();
+ #endif
++        baeum_exit(0);
+         gdb_exit(cpu_env, arg1);
+         ret = get_errno(exit_group(arg1));
+         break;
+diff -Naur qemu-2.8.0-orig/Makefile.target qemu-2.8.0/Makefile.target
+--- qemu-2.8.0-orig/Makefile.target	2017-01-16 00:30:12.354465393 +0900
++++ qemu-2.8.0/Makefile.target	2017-01-16 01:07:58.637703285 +0900
+@@ -13,7 +13,7 @@
+ endif
+ QEMU_CFLAGS += -I.. -I$(SRC_PATH)/target-$(TARGET_BASE_ARCH) -DNEED_CPU_H
+ 
+-QEMU_CFLAGS+=-I$(SRC_PATH)/include
++QEMU_CFLAGS+=-I$(SRC_PATH)/include -I$(SRC_PATH)/../sparsehash/src -I$(SRC_PATH)/../build/sparsehash/src
+ 
+ ifdef CONFIG_USER_ONLY
+ # user emulator name
+@@ -84,7 +84,7 @@
+ 
+ #########################################################
+ # cpu emulator library
+-obj-y = exec.o translate-all.o cpu-exec.o
++obj-y = exec.o translate-all.o cpu-exec.o baeum.o
+ obj-y += translate-common.o
+ obj-y += cpu-exec-common.o
+ obj-y += tcg/tcg.o tcg/tcg-op.o tcg/optimize.o
