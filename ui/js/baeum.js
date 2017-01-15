@@ -1,7 +1,7 @@
 
 $(document).ready(function(){
 
-    var infos = { data: [],
+    var infos = { data: [{t: 0, total_node: 0}],
                   max: 0,
                   t: 0 };
 
@@ -12,9 +12,6 @@ $(document).ready(function(){
         this.data.push(d);
     };
 
-    var n = 40,
-        random = d3.randomNormal(0, .2);
-
     var svg = d3.select("svg"),
         margin = {top: 20, right: 20, bottom: 20, left: 40},
         width = +svg.attr("width") - margin.left - margin.right,
@@ -22,11 +19,9 @@ $(document).ready(function(){
         g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var x = d3.scaleLinear()
-        .domain([0, n - 1])
         .range([0, width]);
 
     var y = d3.scaleLinear()
-        .domain([0, 1])
         .range([height, 0]);
 
     var line = d3.line()
