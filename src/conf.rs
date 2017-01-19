@@ -87,4 +87,10 @@ impl Conf {
         let mut log = self.log.write().unwrap();
         log.update();
     }
+
+    pub fn update_exec_info(&self, newnode:u32) {
+        let mut log = self.log.write().unwrap();
+        log.info.exec_count += 1;
+        log.info.total_node += newnode;
+    }
 }
