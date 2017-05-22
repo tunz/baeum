@@ -20,11 +20,11 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <errno.h>
-#include <dlfcn.h>
-#include <pty.h>
+#include <stdint.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <stdint.h>
+#include <sys/wait.h>
 
 #define PATH_FORKSRV_FD      198
 #define FORK_WAIT_MULT       10
@@ -42,22 +42,6 @@ static void alarm_callback(int sig) {
         timedout = -1;
     }
 }
-
-void initialize_libexec (int argc, char** args, int fd, uint64_t timeout) {
-    struct sigaction sa;
-
-    sa.sa_flags     = SA_RESTART;
-    sa.sa_sigaction = NULL;
-
-    sigemptyset(&sa.sa_mask);
-
-    sa.sa_handler = alarm_callback;
-    sigaction(SIGALRM, &sa, NULL);
-
-    stdin_fd = fd;
-    forksrv_pid = init_forkserver_impl(argc, args, timeout, PATH_FORKSRV_FD, &fsrv_ctl_fd, &fsrv_st_fd);
-}
-
 
 void error_exit(char* msg) {
     perror(msg);
@@ -154,6 +138,21 @@ pid_t init_forkserver_impl(int argc, char** args, uint64_t timeout, int forksrv_
         error_exit("waitpid() failed");
 
     error_exit("Fork server failed");
+}
+
+void initialize_libexec (int argc, char** args, int fd, uint64_t timeout) {
+    struct sigaction sa;
+
+    sa.sa_flags     = SA_RESTART;
+    sa.sa_sigaction = NULL;
+
+    sigemptyset(&sa.sa_mask);
+
+    sa.sa_handler = alarm_callback;
+    sigaction(SIGALRM, &sa, NULL);
+
+    stdin_fd = fd;
+    forksrv_pid = init_forkserver_impl(argc, args, timeout, PATH_FORKSRV_FD, &fsrv_ctl_fd, &fsrv_st_fd);
 }
 
 void kill_forkserver() {

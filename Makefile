@@ -1,10 +1,11 @@
 
-
+RS_FILES := $(wildcard src/*.rs)
+C_FILES  := $(wildcard src/*.c)
 QEMUDIR=$(shell pwd)/qemu
 
 all: $(QEMUDIR)/.compiled baeum
 
-baeum:
+baeum: $(RS_FILES) $(C_FILES)
 	@cargo build --release
 	@cp ./target/release/baeum ./
 
