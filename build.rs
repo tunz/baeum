@@ -1,5 +1,7 @@
-extern crate gcc;
+extern crate cc;
 
 fn main() {
-      gcc::compile_library("libexec.a", &["src/libexec.c"]);
+    cc::Build::new()
+        .file("src/libexec.c")
+        .compile("libexec.a");
 }

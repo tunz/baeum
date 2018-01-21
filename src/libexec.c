@@ -28,6 +28,7 @@
 
 #define PATH_FORKSRV_FD      198
 #define FORK_WAIT_MULT       10
+#define UNUSED(x) (void)(x)
 
 static pid_t forksrv_pid;
 static int fsrv_ctl_fd, fsrv_st_fd;
@@ -37,6 +38,7 @@ static int timedout = 0;
 static int stdin_fd;
 
 static void alarm_callback(int sig) {
+    UNUSED(sig);
     if (child_pid) {
         kill(child_pid, SIGKILL);
         timedout = -1;
@@ -138,6 +140,7 @@ pid_t init_forkserver_impl(int argc, char** args, uint64_t timeout, int forksrv_
         error_exit("waitpid() failed");
 
     error_exit("Fork server failed");
+    return -1;
 }
 
 void initialize_libexec (int argc, char** args, int fd, uint64_t timeout) {

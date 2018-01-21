@@ -1,5 +1,5 @@
 
-RS_FILES := $(wildcard src/*.rs)
+RS_FILES := $(wildcard src/*.rs) build.rs
 C_FILES  := $(wildcard src/*.c)
 QEMUDIR=$(shell pwd)/qemu
 
