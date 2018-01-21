@@ -55,6 +55,7 @@ pub fn load_seed_files(conf: &Conf, seed_dir: &str) -> io::Result<Vec<Seed>> {
     debug!("[*] Load seed files...");
     let seeds = try!(fs::read_dir(seed_dir))
         .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.metadata().unwrap().len() > 0)
         .filter_map(|e| e.path().to_str().and_then(|s| Some(String::from(s))))
         .map(|s| Seed::new_from_file(&conf, &s))
         .collect::<Vec<Seed>>();
